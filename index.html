@@ -1,0 +1,2577 @@
+
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>نظام إدارة المطعم والكافيه والقاعات</title>
+<style>
+:root{
+  --bg:#0c1526;
+  --card:#0f223d;
+  --card2:#102a4a;
+  --text:#f3f6ff;
+  --muted:#b9c6e6;
+  --brand:#2f6bff;
+  --brand2:#18bfa6;
+  --danger:#ff4d4d;
+  --warn:#ffb020;
+  --ok:#2bd972;
+  --line:rgba(255,255,255,.10);
+  --shadow:0 14px 40px rgba(0,0,0,.35);
+  --radius:18px;
+  --radius2:12px;
+  --font: system-ui, -apple-system, Segoe UI, Roboto, "Noto Kufi Arabic","Noto Sans Arabic", Arial, sans-serif;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family:var(--font);
+  background: radial-gradient(1200px 600px at 30% 0%, #17305b 0%, var(--bg) 55%, #08101f 100%);
+  color:var(--text);
+}
+a{color:inherit}
+.container{max-width:1100px;margin:0 auto;padding:18px 14px 60px}
+.header{
+  position:sticky;top:0;z-index:5;
+  backdrop-filter: blur(10px);
+  background: linear-gradient(to bottom, rgba(12,21,38,.92), rgba(12,21,38,.55));
+  border-bottom:1px solid var(--line);
+}
+.header .wrap{max-width:1100px;margin:0 auto;padding:14px}
+.title{font-size:22px;font-weight:900;letter-spacing:.2px;margin:0}
+.subtitle{margin:6px 0 0;color:var(--muted);font-size:13px}
+.nav{
+  display:flex;gap:10px;flex-wrap:wrap;margin-top:12px
+}
+.nav .btn{
+  border:1px solid var(--line);
+  background: rgba(255,255,255,.04);
+  color: var(--text);
+  padding:10px 12px;
+  border-radius:12px;
+  cursor:pointer;
+  font-weight:700;
+  font-size:13px;
+}
+.nav .btn.active{background:rgba(47,107,255,.22);border-color:rgba(47,107,255,.35)}
+.section{display:none}
+.section.active{display:block}
+
+.grid{display:grid;grid-template-columns:1fr;gap:14px}
+@media (min-width:900px){
+  .grid.cols2{grid-template-columns:1.1fr .9fr}
+  .grid.cols3{grid-template-columns:1fr 1fr 1fr}
+}
+.card{
+  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03));
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  box-shadow: var(--shadow);
+  overflow:hidden;
+}
+.card .hd{
+  padding:14px 14px 10px;
+  display:flex;align-items:flex-start;justify-content:space-between;gap:10px;
+  border-bottom:1px solid var(--line);
+  background: rgba(0,0,0,.12);
+}
+.card .hd h3{margin:0;font-size:16px;font-weight:900}
+.card .hd .desc{margin:6px 0 0;color:var(--muted);font-size:12px;line-height:1.5}
+.card .bd{padding:14px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.spread{justify-content:space-between}
+.pill{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:6px 10px;border-radius:999px;
+  border:1px solid var(--line);
+  font-size:12px;color:var(--muted);
+  background: rgba(255,255,255,.03);
+}
+.pill.ok{color:#07140d;background:rgba(43,217,114,.18);border-color:rgba(43,217,114,.25)}
+.pill.warn{color:#1a1200;background:rgba(255,176,32,.18);border-color:rgba(255,176,32,.25)}
+.pill.danger{color:#190808;background:rgba(255,77,77,.18);border-color:rgba(255,77,77,.25)}
+.kpi{
+  display:grid;grid-template-columns:repeat(2,1fr);gap:10px
+}
+@media (min-width:600px){.kpi{grid-template-columns:repeat(4,1fr)}}
+.kpi .box{
+  background: rgba(255,255,255,.03);
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:12px;
+}
+.kpi .box .l{font-size:12px;color:var(--muted)}
+.kpi .box .v{margin-top:6px;font-size:18px;font-weight:900}
+.kpi .box .s{margin-top:4px;font-size:12px;color:var(--muted)}
+.btn{
+  border:0;
+  background: var(--brand);
+  color:white;
+  padding:10px 12px;
+  border-radius:12px;
+  cursor:pointer;
+  font-weight:900;
+}
+.btn.secondary{background:rgba(255,255,255,.08);border:1px solid var(--line);color:var(--text)}
+.btn.danger{background:rgba(255,77,77,.95)}
+.btn.ok{background:rgba(24,191,166,.95)}
+.btn.warn{background:rgba(255,176,32,.95);color:#201400}
+.btn.small{padding:8px 10px;font-weight:800;font-size:13px;border-radius:10px}
+.btn.inline{display:inline-flex;align-items:center;gap:8px}
+.btn:disabled{opacity:.55;cursor:not-allowed}
+
+.field{display:grid;gap:6px;min-width:160px;flex:1}
+label{font-size:12px;color:var(--muted)}
+input,select,textarea{
+  width:100%;
+  background: rgba(255,255,255,.04);
+  color: var(--text);
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:10px 10px;
+  outline:none;
+  font-family:var(--font);
+}
+textarea{min-height:90px;resize:vertical}
+input::placeholder,textarea::placeholder{color:rgba(185,198,230,.75)}
+.help{font-size:12px;color:var(--muted);line-height:1.6}
+.hr{height:1px;background:var(--line);margin:12px 0}
+
+.tableWrap{
+  overflow:auto;
+  border:1px solid var(--line);
+  border-radius:14px;
+  background: rgba(0,0,0,.16);
+}
+table{
+  width:100%;
+  border-collapse:collapse;
+  min-width:820px;
+}
+th,td{padding:10px 10px;border-bottom:1px solid var(--line);text-align:right;vertical-align:top;font-size:13px}
+th{
+  position:sticky;top:0;
+  background: rgba(12,21,38,.92);
+  color: var(--muted);
+  font-weight:900;
+  z-index:2;
+}
+tr:hover td{background:rgba(255,255,255,.03)}
+td .mini{color:var(--muted);font-size:12px;margin-top:4px}
+.badge{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:5px 8px;border-radius:999px;
+  border:1px solid var(--line);
+  font-size:12px;
+  background: rgba(255,255,255,.03);
+}
+.badge.ok{background:rgba(43,217,114,.12);border-color:rgba(43,217,114,.22)}
+.badge.warn{background:rgba(255,176,32,.12);border-color:rgba(255,176,32,.22)}
+.badge.danger{background:rgba(255,77,77,.12);border-color:rgba(255,77,77,.22)}
+
+.calendar{
+  display:grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap:8px;
+}
+.dow{font-size:12px;color:var(--muted);text-align:center;padding:6px 0}
+.day{
+  border:1px solid var(--line);
+  background: rgba(255,255,255,.03);
+  border-radius:14px;
+  min-height:96px;
+  padding:10px;
+  cursor:pointer;
+  position:relative;
+}
+.day.muted{opacity:.45;cursor:default}
+.day .num{font-weight:900;font-size:13px;color:var(--muted)}
+.day .halls{
+  margin-top:8px;
+  display:grid;
+  gap:6px;
+}
+.hallBox{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:6px 8px;border-radius:12px;border:1px solid var(--line);
+  background: rgba(0,0,0,.14);
+  font-size:12px;color:var(--muted);
+}
+.hallBox.booked{border-color:rgba(47,107,255,.35);background:rgba(47,107,255,.14);color:var(--text)}
+.hallBox .t{font-weight:900}
+.hallBox .p{opacity:.85}
+.day.hasBookings{outline:2px solid rgba(47,107,255,.22)}
+.day.hasBookings::after{
+  content:"";
+  position:absolute;top:10px;left:10px;
+  width:10px;height:10px;border-radius:50%;
+  background: rgba(47,107,255,.9);
+  box-shadow: 0 0 0 4px rgba(47,107,255,.15);
+}
+.toolbar{
+  display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end
+}
+
+.modalBack{
+  position:fixed;inset:0;background:rgba(0,0,0,.55);
+  display:none;align-items:flex-end;justify-content:center;
+  z-index:99;
+}
+.modalBack.show{display:flex}
+.modal{
+  width:min(1000px, 100%);
+  max-height:88vh;
+  overflow:auto;
+  background: linear-gradient(180deg, rgba(16,42,74,.98), rgba(12,21,38,.98));
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:22px 22px 0 0;
+  box-shadow: 0 26px 70px rgba(0,0,0,.55);
+  padding:14px;
+}
+.modal .mh{
+  display:flex;justify-content:space-between;align-items:center;gap:12px;
+  padding:8px 4px 10px;
+  border-bottom:1px solid var(--line);
+}
+.modal .mh h3{margin:0;font-size:16px;font-weight:900}
+.modal .mc{padding:12px 4px}
+.toast{
+  position:fixed;left:12px;right:12px;bottom:12px;
+  max-width:980px;margin:0 auto;
+  padding:12px 14px;border-radius:14px;
+  border:1px solid var(--line);
+  background: rgba(0,0,0,.55);
+  backdrop-filter: blur(8px);
+  color: var(--text);
+  display:none;
+  z-index:120;
+}
+.toast.show{display:block}
+.toast .t{font-weight:900}
+.toast .s{margin-top:4px;color:var(--muted);font-size:12px;line-height:1.5}
+.smallNote{font-size:12px;color:var(--muted);line-height:1.6}
+.footerGap{height:40px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="wrap">
+    <h1 class="title">نظام إدارة المطعم والكافيه والقاعات</h1>
+    <div class="subtitle">ملف واحد • تخزين على الموبايل تلقائياً • بدون تسجيل دخول (يمكن تفعيل الصلاحيات لاحقاً)</div>
+
+    <div class="nav" id="nav">
+      <button class="btn active" data-go="home">الرئيسية</button>
+      <button class="btn" data-go="bookings">إدارة الحجوزات</button>
+      <button class="btn" data-go="cash">الإيرادات والمصروفات</button>
+      <button class="btn" data-go="stock">المخزون والمشتريات</button>
+      <button class="btn" data-go="hr">شؤون العاملين</button>
+      <button class="btn" data-go="users">إدارة المستخدمين</button>
+      <button class="btn" data-go="backup">نسخ احتياطي</button>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <div id="sec-home" class="section active">
+    <div class="grid cols2">
+      <div class="card">
+        <div class="hd">
+          <div>
+            <h3>لوحة سريعة</h3>
+            <div class="desc">ملخص للحجوزات والمتبقي والصندوق والمخزون.</div>
+          </div>
+          <span class="pill">العملة: جنيه مصري</span>
+        </div>
+        <div class="bd">
+          <div class="kpi" id="kpis">
+            <div class="box">
+              <div class="l">حجوزات هذا الشهر</div>
+              <div class="v" id="kpiMonthBookings">0</div>
+              <div class="s" id="kpiMonthBookingsSub">—</div>
+            </div>
+            <div class="box">
+              <div class="l">إجمالي المتبقي</div>
+              <div class="v" id="kpiRemaining">0</div>
+              <div class="s">من حجوزات القاعات</div>
+            </div>
+            <div class="box">
+              <div class="l">صافي الصندوق</div>
+              <div class="v" id="kpiCashNet">0</div>
+              <div class="s">مقبوضات - مدفوعات</div>
+            </div>
+            <div class="box">
+              <div class="l">عدد أصناف المخزن</div>
+              <div class="v" id="kpiItems">0</div>
+              <div class="s">مع رصيد كمي</div>
+            </div>
+          </div>
+
+          <div class="hr"></div>
+
+          <div class="row spread">
+            <div class="smallNote">
+              كل البيانات محفوظة تلقائياً على جهازك داخل المتصفح.
+              لو مسحت بيانات المتصفح أو غيرت جهاز، استخدم قسم “نسخ احتياطي”.
+            </div>
+            <div class="row">
+              <button class="btn secondary small" onclick="go('bookings')">اذهب للحجوزات</button>
+              <button class="btn secondary small" onclick="go('stock')">اذهب للمخزن</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="hd">
+          <div>
+            <h3>حالة النظام</h3>
+            <div class="desc">بدون تسجيل دخول حالياً. يمكن تفعيل الصلاحيات لاحقاً من إدارة المستخدمين.</div>
+          </div>
+          <span class="pill ok" id="pillAuth">الدخول مباشر</span>
+        </div>
+        <div class="bd">
+          <div class="row">
+            <span class="pill" id="pillStorage">التخزين: محلي</span>
+            <span class="pill" id="pillVersion">الإصدار: v1</span>
+          </div>
+          <div class="hr"></div>
+          <div class="help">
+            لو ظهرت مشاكل في Vercel (مثل 404)، تأكد أن الملف اسمه index.html وموجود في جذر المشروع، ثم اعمل Deploy جديد.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footerGap"></div>
+  </div>
+
+  <div id="sec-bookings" class="section">
+    <div class="card">
+      <div class="hd">
+        <div>
+          <h3>إدارة حجوزات القاعات</h3>
+          <div class="desc">تقويم مرئي شهري + بحث وفلترة + إجمالي المتبقي. مع فترة صباحية/مسائية.</div>
+        </div>
+        <div class="row">
+          <span class="pill">القاعات: كابيتال • برادايس • Sky • الماسا</span>
+        </div>
+      </div>
+      <div class="bd">
+        <div class="toolbar">
+          <div class="field" style="max-width:220px">
+            <label>الشهر</label>
+            <select id="calMonth"></select>
+          </div>
+          <div class="field" style="max-width:160px">
+            <label>السنة</label>
+            <select id="calYear"></select>
+          </div>
+          <div class="field" style="max-width:220px">
+            <label>بحث باسم العميل</label>
+            <input id="bkSearch" placeholder="اكتب اسم العميل..." />
+          </div>
+          <div class="field" style="max-width:240px">
+            <label>فلترة بتاريخ</label>
+            <input id="bkFilterDate" type="date" />
+          </div>
+          <div class="row">
+            <button class="btn secondary small" onclick="resetBookingFilters()">مسح الفلاتر</button>
+            <button class="btn small" onclick="openBookingModal()">إضافة حجز</button>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="row spread">
+          <div class="row">
+            <span class="pill" id="bkCountPill">عدد الحجوزات: 0</span>
+            <span class="pill warn" id="bkRemainingPill">إجمالي المتبقي: 0</span>
+          </div>
+          <div class="row">
+            <button class="btn secondary small" onclick="openCalendarLegend()">مفتاح الألوان</button>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="calendar" id="calendar">
+          <!-- filled by JS -->
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="tableWrap">
+          <table>
+            <thead>
+              <tr>
+                <th>التاريخ</th>
+                <th>الفترة</th>
+                <th>القاعة</th>
+                <th>العميل</th>
+                <th>الهاتف</th>
+                <th>إجمالي</th>
+                <th>مدفوع</th>
+                <th>متبقي</th>
+                <th>إجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="bookingsTbody"></tbody>
+          </table>
+        </div>
+
+        <div class="smallNote" style="margin-top:10px">
+          ملاحظة: يمكن سداد المتبقي على دفعات. استخدم “تعديل” لتحديث المدفوع/المتبقي.
+        </div>
+      </div>
+    </div>
+    <div class="footerGap"></div>
+  </div>
+
+  <div id="sec-cash" class="section">
+    <div class="card">
+      <div class="hd">
+        <div>
+          <h3>الإيرادات والمصروفات (الصندوق)</h3>
+          <div class="desc">تسجيل المقبوضات والمدفوعات يومياً للمطعم والكافيه (ضمن نفس القسم).</div>
+        </div>
+        <div class="row">
+          <span class="pill" id="cashPill">صافي: 0</span>
+        </div>
+      </div>
+      <div class="bd">
+        <div class="grid cols2">
+          <div class="card" style="box-shadow:none">
+            <div class="hd">
+              <div>
+                <h3>إضافة حركة صندوق</h3>
+                <div class="desc">مقبوضات/مدفوعات + وصف.</div>
+              </div>
+              <span class="pill">EGP</span>
+            </div>
+            <div class="bd">
+              <div class="row">
+                <div class="field">
+                  <label>التاريخ</label>
+                  <input id="cashDate" type="date" />
+                </div>
+                <div class="field">
+                  <label>النوع</label>
+                  <select id="cashType">
+                    <option value="in">مقبوضات</option>
+                    <option value="out">مدفوعات</option>
+                  </select>
+                </div>
+              </div>
+              <div class="row">
+                <div class="field">
+                  <label>القسم</label>
+                  <select id="cashDept">
+                    <option value="restaurant_cafe">المطعم والكافيه</option>
+                    <option value="halls">القاعات</option>
+                    <option value="kids">كيدز اريا</option>
+                    <option value="other">أخرى</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label>المبلغ (جنيه)</label>
+                  <input id="cashAmount" type="number" step="0.01" placeholder="مثال: 2500" />
+                </div>
+              </div>
+              <div class="field">
+                <label>وصف</label>
+                <input id="cashNote" placeholder="مثال: إيراد يومي - مصروف كهرباء..." />
+              </div>
+              <div class="row" style="margin-top:10px">
+                <button class="btn ok" onclick="addCash()">حفظ الحركة</button>
+                <button class="btn secondary" onclick="fillTodayCash()">اليوم</button>
+              </div>
+              <div class="help" style="margin-top:10px">
+                التقارير: يومي/شهري/سنوي + تصدير PDF (لاحقاً). حالياً متاح عرض وتصفية داخل الصفحة.
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="box-shadow:none">
+            <div class="hd">
+              <div>
+                <h3>تقرير الصندوق</h3>
+                <div class="desc">فلترة حسب فترة زمنية.</div>
+              </div>
+            </div>
+            <div class="bd">
+              <div class="row">
+                <div class="field">
+                  <label>من تاريخ</label>
+                  <input id="cashFrom" type="date" />
+                </div>
+                <div class="field">
+                  <label>إلى تاريخ</label>
+                  <input id="cashTo" type="date" />
+                </div>
+              </div>
+              <div class="row" style="margin-top:10px">
+                <button class="btn secondary" onclick="applyCashRange()">تطبيق</button>
+                <button class="btn secondary" onclick="resetCashRange()">مسح</button>
+              </div>
+              <div class="hr"></div>
+              <div class="kpi">
+                <div class="box">
+                  <div class="l">إجمالي المقبوضات</div>
+                  <div class="v" id="cashSumIn">0</div>
+                </div>
+                <div class="box">
+                  <div class="l">إجمالي المدفوعات</div>
+                  <div class="v" id="cashSumOut">0</div>
+                </div>
+                <div class="box">
+                  <div class="l">الصافي</div>
+                  <div class="v" id="cashNet">0</div>
+                </div>
+                <div class="box">
+                  <div class="l">عدد الحركات</div>
+                  <div class="v" id="cashCount">0</div>
+                </div>
+              </div>
+              <div class="smallNote" style="margin-top:10px">
+                لو محتاج “حساب أرباح وخسائر” تفصيلي (P&L) لاحقاً: هنضيفه بناءً على تكاليف/مبيعات الأقسام.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="tableWrap">
+          <table>
+            <thead>
+              <tr>
+                <th>التاريخ</th>
+                <th>النوع</th>
+                <th>القسم</th>
+                <th>المبلغ</th>
+                <th>الوصف</th>
+                <th>إجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="cashTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="footerGap"></div>
+  </div>
+
+  <div id="sec-stock" class="section">
+    <div class="card">
+      <div class="hd">
+        <div>
+          <h3>المخزون والمشتريات</h3>
+          <div class="desc">ربط المشتريات بالمخزن + رصيد الأصناف + المنصرف اليومي + جرد فعلي ومقارنة مع المسجل وإظهار عجز/زيادة.</div>
+        </div>
+        <div class="row">
+          <span class="pill" id="stockItemsPill">الأصناف: 0</span>
+          <span class="pill" id="stockValuePill">رصيد كمي: 0</span>
+        </div>
+      </div>
+      <div class="bd">
+
+        <div class="grid cols2">
+          <div class="card" style="box-shadow:none">
+            <div class="hd">
+              <div>
+                <h3>إضافة/تعديل صنف مخزون</h3>
+                <div class="desc">وحدات: وحدة/كيلو/لتر/علبة/كرتونة.</div>
+              </div>
+            </div>
+            <div class="bd">
+              <div class="row">
+                <div class="field">
+                  <label>اسم الصنف</label>
+                  <input id="itemName" placeholder="مثال: سكر" />
+                </div>
+                <div class="field" style="max-width:160px">
+                  <label>الوحدة</label>
+                  <select id="itemUnit">
+                    <option value="وحدة">وحدة</option>
+                    <option value="كيلو">كيلو</option>
+                    <option value="لتر">لتر</option>
+                    <option value="علبة">علبة</option>
+                    <option value="كرتونة">كرتونة</option>
+                  </select>
+                </div>
+              </div>
+              <div class="row">
+                <div class="field">
+                  <label>رصيد افتتاحي (كمية)</label>
+                  <input id="itemQty" type="number" step="0.01" placeholder="0" />
+                </div>
+                <div class="field">
+                  <label>ملاحظات</label>
+                  <input id="itemNote" placeholder="اختياري" />
+                </div>
+              </div>
+              <div class="row" style="margin-top:10px">
+                <button class="btn ok" onclick="saveItem()">حفظ الصنف</button>
+                <button class="btn secondary" onclick="resetItemForm()">تفريغ</button>
+              </div>
+              <div class="help" style="margin-top:10px">
+                رصيد المخزن يتم حسابه من (الرصيد الافتتاحي + المشتريات - المنصرف).
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="box-shadow:none">
+            <div class="hd">
+              <div>
+                <h3>المشتريات (تُضاف للمخزن)</h3>
+                <div class="desc">تسجيل مشتريات بتاريخ/صنف/كمية/سعر شراء اختياري.</div>
+              </div>
+            </div>
+            <div class="bd">
+              <div class="row">
+                <div class="field">
+                  <label>التاريخ</label>
+                  <input id="purDate" type="date" />
+                </div>
+                <div class="field">
+                  <label>الصنف</label>
+                  <select id="purItem"></select>
+                </div>
+              </div>
+              <div class="row">
+                <div class="field">
+                  <label>الكمية</label>
+                  <input id="purQty" type="number" step="0.01" placeholder="0" />
+                </div>
+                <div class="field">
+                  <label>مورد (اختياري)</label>
+                  <input id="purSupplier" placeholder="اسم المورد" />
+                </div>
+              </div>
+              <div class="row">
+                <div class="field">
+                  <label>إجمالي تكلفة الشراء (اختياري)</label>
+                  <input id="purCost" type="number" step="0.01" placeholder="0" />
+                </div>
+                <div class="field">
+                  <label>ملاحظات</label>
+                  <input id="purNote" placeholder="اختياري" />
+                </div>
+              </div>
+              <div class="row" style="margin-top:10px">
+                <button class="btn ok" onclick="addPurchase()">إضافة مشتريات</button>
+                <button class="btn secondary" onclick="fillTodayPurchase()">اليوم</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="grid cols2">
+          <div class="card" style="box-shadow:none">
+            <div class="hd">
+              <div>
+                <h3>المنصرف اليومي من المخزن</h3>
+                <div class="desc">تسجيل كميات منصرفة لكل يوم.</div>
+              </div>
+            </div>
+            <div class="bd">
+              <div class="row">
+                <div class="field">
+                  <label>التاريخ</label>
+                  <input id="outDate" type="date" />
+                </div>
+                <div class="field">
+                  <label>الصنف</label>
+                  <select id="outItem"></select>
+                </div>
+              </div>
+              <div class="row">
+                <div class="field">
+                  <label>الكمية المنصرفة</label>
+                  <input id="outQty" type="number" step="0.01" placeholder="0" />
+                </div>
+                <div class="field">
+                  <label>ملاحظات</label>
+                  <input id="outNote" placeholder="مثال: استهلاك يومي" />
+                </div>
+              </div>
+              <div class="row" style="margin-top:10px">
+                <button class="btn ok" onclick="addOut()">تسجيل المنصرف</button>
+                <button class="btn secondary" onclick="fillTodayOut()">اليوم</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="box-shadow:none">
+            <div class="hd">
+              <div>
+                <h3>الجرد الفعلي</h3>
+                <div class="desc">أدخل الرصيد الفعلي وقارن مع المسجل (عجز/زيادة).</div>
+              </div>
+            </div>
+            <div class="bd">
+              <div class="row">
+                <div class="field">
+                  <label>تاريخ الجرد</label>
+                  <input id="invDate" type="date" />
+                </div>
+                <div class="field">
+                  <label>الصنف</label>
+                  <select id="invItem"></select>
+                </div>
+              </div>
+              <div class="row">
+                <div class="field">
+                  <label>الكمية الفعلية</label>
+                  <input id="invActual" type="number" step="0.01" placeholder="0" />
+                </div>
+                <div class="field">
+                  <label>ملاحظات</label>
+                  <input id="invNote" placeholder="اختياري" />
+                </div>
+              </div>
+              <div class="row" style="margin-top:10px">
+                <button class="btn ok" onclick="addInventoryCheck()">حفظ الجرد</button>
+                <button class="btn secondary" onclick="fillTodayInv()">اليوم</button>
+              </div>
+              <div class="help" style="margin-top:10px">
+                سيتم إظهار الفرق تلقائياً (عجز/زيادة) في جدول الجرد.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="grid cols2">
+          <div class="card" style="box-shadow:none">
+            <div class="hd">
+              <div>
+                <h3>رصيد المخزن (كل الأصناف)</h3>
+                <div class="desc">أيقونة سريعة لمعرفة الرصيد لكل صنف.</div>
+              </div>
+              <button class="btn secondary small" onclick="openStockBalance()">عرض الرصيد</button>
+            </div>
+            <div class="bd">
+              <div class="help">اضغط “عرض الرصيد” لعرض جميع الأصناف وكميتها المسجلة حالياً.</div>
+            </div>
+          </div>
+
+          <div class="card" style="box-shadow:none">
+            <div class="hd">
+              <div>
+                <h3>ملاحظات مهمة</h3>
+                <div class="desc">هذه النسخة تخزين محلي. النسخ الاحتياطي على الإنترنت يحتاج نسخة سيرفر لاحقاً.</div>
+              </div>
+            </div>
+            <div class="bd">
+              <div class="smallNote">
+                لو عندك أكثر من مستخدم على أجهزة مختلفة، كل جهاز له بياناته. لتوحيد البيانات بين الأجهزة نحتاج قاعدة بيانات على الإنترنت (مرحلة لاحقة).
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="tableWrap">
+          <table>
+            <thead>
+              <tr>
+                <th>الصنف</th>
+                <th>الوحدة</th>
+                <th>رصيد افتتاحي</th>
+                <th>إجمالي مشتريات</th>
+                <th>إجمالي منصرف</th>
+                <th>الرصيد الحالي</th>
+                <th>إجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="itemsTbody"></tbody>
+          </table>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="grid cols2">
+          <div class="tableWrap">
+            <table>
+              <thead>
+                <tr>
+                  <th colspan="6">سجل المشتريات</th>
+                </tr>
+                <tr>
+                  <th>التاريخ</th>
+                  <th>الصنف</th>
+                  <th>الكمية</th>
+                  <th>المورد</th>
+                  <th>التكلفة</th>
+                  <th>إجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="purTbody"></tbody>
+            </table>
+          </div>
+
+          <div class="tableWrap">
+            <table>
+              <thead>
+                <tr>
+                  <th colspan="5">سجل المنصرف</th>
+                </tr>
+                <tr>
+                  <th>التاريخ</th>
+                  <th>الصنف</th>
+                  <th>الكمية</th>
+                  <th>ملاحظات</th>
+                  <th>إجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="outTbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="tableWrap">
+          <table>
+            <thead>
+              <tr>
+                <th colspan="7">سجل الجرد الفعلي</th>
+              </tr>
+              <tr>
+                <th>التاريخ</th>
+                <th>الصنف</th>
+                <th>المسجل</th>
+                <th>الفعلي</th>
+                <th>الفرق</th>
+                <th>الحالة</th>
+                <th>إجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="invTbody"></tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+    <div class="footerGap"></div>
+  </div>
+
+  <div id="sec-hr" class="section">
+    <div class="card">
+      <div class="hd">
+        <div>
+          <h3>شؤون العاملين</h3>
+          <div class="desc">حضور وانصراف + رواتب (مقسمة على 30 يوم) + سلف + مكافآت + جزاءات.</div>
+        </div>
+        <div class="row">
+          <span class="pill" id="empCountPill">عدد العاملين: 0</span>
+        </div>
+      </div>
+      <div class="bd">
+
+        <div class="grid cols2">
+          <div class="card" style="box-shadow:none">
+            <div class="hd">
+              <div>
+                <h3>إضافة عامل</h3>
+                <div class="desc">بيانات أساسية + الراتب الشهري.</div>
+              </div>
+            </div>
+            <div class="bd">
+              <div class="row">
+                <div class="field">
+                  <label>اسم العامل</label>
+                  <input id="empName" placeholder="مثال: أحمد" />
+                </div>
+                <div class="field">
+                  <label>الوظيفة</label>
+                  <input id="empRole" placeholder="مثال: كاشير" />
+                </div>
+              </div>
+              <div class="row">
+                <div class="field">
+                  <label>الراتب الشهري (جنيه)</label>
+                  <input id="empSalary" type="number" step="0.01" placeholder="0" />
+                </div>
+                <div class="field">
+                  <label>ملاحظات</label>
+                  <input id="empNote" placeholder="اختياري" />
+                </div>
+              </div>
+              <div class="row" style="margin-top:10px">
+                <button class="btn ok" onclick="addEmployee()">حفظ</button>
+                <button class="btn secondary" onclick="resetEmpForm()">تفريغ</button>
+              </div>
+              <div class="help" style="margin-top:10px">
+                الراتب اليومي = الراتب الشهري ÷ 30.
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="box-shadow:none">
+            <div class="hd">
+              <div>
+                <h3>تسجيل حضور/انصراف</h3>
+                <div class="desc">إضافة موظف صلاحية “تسجيل حضور وانصراف” لاحقاً عند تفعيل الصلاحيات.</div>
+              </div>
+            </div>
+            <div class="bd">
+              <div class="row">
+                <div class="field">
+                  <label>التاريخ</label>
+                  <input id="attDate" type="date" />
+                </div>
+                <div class="field">
+                  <label>العامل</label>
+                  <select id="attEmp"></select>
+                </div>
+              </div>
+              <div class="row">
+                <div class="field">
+                  <label>وقت الحضور</label>
+                  <input id="attIn" type="time" />
+                </div>
+                <div class="field">
+                  <label>وقت الانصراف</label>
+                  <input id="attOut" type="time" />
+                </div>
+              </div>
+              <div class="row" style="margin-top:10px">
+                <button class="btn ok" onclick="addAttendance()">حفظ</button>
+                <button class="btn secondary" onclick="fillTodayAtt()">اليوم</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="grid cols2">
+          <div class="card" style="box-shadow:none">
+            <div class="hd">
+              <div>
+                <h3>حركة مالية على العامل</h3>
+                <div class="desc">سلفة/مكافأة/جزاء (يؤثر على صافي الراتب).</div>
+              </div>
+            </div>
+            <div class="bd">
+              <div class="row">
+                <div class="field">
+                  <label>التاريخ</label>
+                  <input id="empTxDate" type="date" />
+                </div>
+                <div class="field">
+                  <label>العامل</label>
+                  <select id="empTxEmp"></select>
+                </div>
+              </div>
+              <div class="row">
+                <div class="field">
+                  <label>النوع</label>
+                  <select id="empTxType">
+                    <option value="advance">سلفة</option>
+                    <option value="bonus">مكافأة</option>
+                    <option value="penalty">جزاء</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label>المبلغ (جنيه)</label>
+                  <input id="empTxAmount" type="number" step="0.01" placeholder="0" />
+                </div>
+              </div>
+              <div class="field">
+                <label>سبب/ملاحظات</label>
+                <input id="empTxNote" placeholder="مثال: تأخير - مكافأة..." />
+              </div>
+              <div class="row" style="margin-top:10px">
+                <button class="btn ok" onclick="addEmpTx()">حفظ</button>
+                <button class="btn secondary" onclick="fillTodayEmpTx()">اليوم</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="box-shadow:none">
+            <div class="hd">
+              <div>
+                <h3>حساب الرواتب</h3>
+                <div class="desc">عرض مستحقات حسب فترة (تقديري) بناءً على الراتب اليومي والحضور والحركات المالية.</div>
+              </div>
+            </div>
+            <div class="bd">
+              <div class="row">
+                <div class="field">
+                  <label>من تاريخ</label>
+                  <input id="payFrom" type="date" />
+                </div>
+                <div class="field">
+                  <label>إلى تاريخ</label>
+                  <input id="payTo" type="date" />
+                </div>
+              </div>
+              <div class="row" style="margin-top:10px">
+                <button class="btn secondary" onclick="calcPayroll()">حساب</button>
+                <button class="btn secondary" onclick="resetPayroll()">مسح</button>
+              </div>
+              <div class="hr"></div>
+              <div class="help" id="payrollResult">اختر فترة واضغط “حساب”.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="tableWrap">
+          <table>
+            <thead>
+              <tr>
+                <th>العامل</th>
+                <th>الوظيفة</th>
+                <th>الراتب الشهري</th>
+                <th>الراتب اليومي</th>
+                <th>ملاحظات</th>
+                <th>إجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="empTbody"></tbody>
+          </table>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="grid cols2">
+          <div class="tableWrap">
+            <table>
+              <thead>
+                <tr><th colspan="6">سجل الحضور والانصراف</th></tr>
+                <tr>
+                  <th>التاريخ</th>
+                  <th>العامل</th>
+                  <th>حضور</th>
+                  <th>انصراف</th>
+                  <th>ملاحظات</th>
+                  <th>إجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="attTbody"></tbody>
+            </table>
+          </div>
+
+          <div class="tableWrap">
+            <table>
+              <thead>
+                <tr><th colspan="6">حركات مالية للعاملين</th></tr>
+                <tr>
+                  <th>التاريخ</th>
+                  <th>العامل</th>
+                  <th>النوع</th>
+                  <th>المبلغ</th>
+                  <th>ملاحظات</th>
+                  <th>إجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="empTxTbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    <div class="footerGap"></div>
+  </div>
+
+  <div id="sec-users" class="section">
+    <div class="card">
+      <div class="hd">
+        <div>
+          <h3>إدارة المستخدمين</h3>
+          <div class="desc">حالياً الدخول مباشر. يمكنك لاحقاً تفعيل الصلاحيات من هنا.</div>
+        </div>
+        <div class="row">
+          <span class="pill" id="authEnabledPill">الصلاحيات: غير مفعلة</span>
+        </div>
+      </div>
+      <div class="bd">
+        <div class="grid cols2">
+          <div class="card" style="box-shadow:none">
+            <div class="hd">
+              <div>
+                <h3>تفعيل الصلاحيات (لاحقاً)</h3>
+                <div class="desc">مقفل افتراضياً حتى لا يسبب تعقيد أو أخطاء.</div>
+              </div>
+            </div>
+            <div class="bd">
+              <div class="row spread">
+                <div>
+                  <div class="help">عند التفعيل، سيتم طلب تسجيل دخول لكل قسم حسب الصلاحيات.</div>
+                </div>
+                <div class="row">
+                  <button class="btn secondary" onclick="toggleAuth(false)">إيقاف</button>
+                  <button class="btn warn" onclick="toggleAuth(true)">تفعيل</button>
+                </div>
+              </div>
+              <div class="hr"></div>
+              <div class="smallNote">
+                في حالة التفعيل: مدير + محاسب + مسؤول مشتريات + مسؤول مخزن + موظف حضور/انصراف.
+                ويمكنك تعديل الصلاحيات من داخل البرنامج.
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="box-shadow:none">
+            <div class="hd">
+              <div>
+                <h3>إضافة مستخدم</h3>
+                <div class="desc">اكتب وصف المستخدم (مثال: مدير) ثم اختر الصلاحيات.</div>
+              </div>
+            </div>
+            <div class="bd">
+              <div class="row">
+                <div class="field">
+                  <label>اسم المستخدم</label>
+                  <input id="uName" placeholder="مثال: manager1" />
+                </div>
+                <div class="field">
+                  <label>الوصف</label>
+                  <input id="uDesc" placeholder="مثال: مدير" />
+                </div>
+              </div>
+              <div class="row">
+                <div class="field">
+                  <label>كلمة المرور</label>
+                  <input id="uPass" placeholder="اختياري" />
+                </div>
+                <div class="field">
+                  <label>الدور</label>
+                  <select id="uRole">
+                    <option value="manager">مدير</option>
+                    <option value="accountant">محاسب</option>
+                    <option value="buyer">مسؤول مشتريات</option>
+                    <option value="storekeeper">مسؤول مخزن</option>
+                    <option value="attendance">موظف حضور/انصراف</option>
+                  </select>
+                </div>
+              </div>
+              <div class="hr"></div>
+              <div class="help">الصلاحيات التفصيلية (قابلة للتعديل لاحقاً):</div>
+              <div class="row" style="margin-top:8px">
+                <label class="pill"><input type="checkbox" id="permBookings" checked /> الحجوزات</label>
+                <label class="pill"><input type="checkbox" id="permCash" checked /> الصندوق</label>
+                <label class="pill"><input type="checkbox" id="permStock" checked /> المخزون</label>
+                <label class="pill"><input type="checkbox" id="permHr" checked /> شؤون العاملين</label>
+                <label class="pill"><input type="checkbox" id="permUsers" /> إدارة المستخدمين</label>
+                <label class="pill"><input type="checkbox" id="permDelete" /> حذف/تعديل بيانات</label>
+              </div>
+              <div class="row" style="margin-top:10px">
+                <button class="btn ok" onclick="addUser()">إضافة</button>
+                <button class="btn secondary" onclick="resetUserForm()">تفريغ</button>
+              </div>
+              <div class="smallNote" style="margin-top:10px">
+                ملاحظة: طالما الصلاحيات “غير مفعلة”، هذه البيانات لن تمنع الدخول، لكنها جاهزة للاستخدام لاحقاً.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="tableWrap">
+          <table>
+            <thead>
+              <tr>
+                <th>اسم المستخدم</th>
+                <th>الوصف</th>
+                <th>الدور</th>
+                <th>الصلاحيات</th>
+                <th>إجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="usersTbody"></tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+    <div class="footerGap"></div>
+  </div>
+
+  <div id="sec-backup" class="section">
+    <div class="card">
+      <div class="hd">
+        <div>
+          <h3>نسخ احتياطي</h3>
+          <div class="desc">تصدير/استيراد بياناتك كملف JSON. (بديل التخزين السحابي حالياً).</div>
+        </div>
+        <span class="pill">يُنصح يومياً</span>
+      </div>
+      <div class="bd">
+        <div class="row">
+          <button class="btn ok" onclick="exportJSON()">تصدير نسخة احتياطية</button>
+          <label class="btn secondary inline">
+            استيراد
+            <input type="file" accept="application/json" style="display:none" onchange="importJSONFile(event)" />
+          </label>
+          <button class="btn danger" onclick="resetAllData()">مسح كل البيانات</button>
+        </div>
+        <div class="hr"></div>
+        <div class="help">
+          لو محتاج نسخ احتياطي تلقائي على الإنترنت عند كل تعديل: ده يحتاج إعداد خدمة قواعد بيانات/تخزين سحابي (مرحلة 2).
+        </div>
+        <div class="hr"></div>
+        <div class="field">
+          <label>استيراد يدوي (الصق JSON)</label>
+          <textarea id="impTxt" placeholder="الصق محتوى JSON هنا ثم اضغط استيراد"></textarea>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <button class="btn ok" onclick="doImport()">استيراد من النص</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="modalBack" id="modalBack">
+  <div class="modal" id="modal">
+    <div class="mh">
+      <h3 id="modalTitle">—</h3>
+      <button class="btn secondary small" onclick="closeModal()">إغلاق</button>
+    </div>
+    <div class="mc" id="modalContent"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <div class="t" id="toastT">—</div>
+  <div class="s" id="toastS">—</div>
+</div>
+
+<script>
+// ======= تخزين =======
+const STORE_KEY = "restocafe_v1";
+const defaultData = () => ({
+  authEnabled: false,
+  session: { user: null },
+  users: [],
+  halls: ["قاعة كابيتال","قاعة برادايس","قاعة Sky","قاعة الماسا"],
+  bookings: [],
+  cash: [],
+  items: [],
+  purchases: [],
+  stockOut: [],
+  inventoryChecks: [],
+  employees: [],
+  attendance: [],
+  empTx: []
+});
+
+let DB = loadDB();
+
+function loadDB(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(!raw) return defaultData();
+    const parsed = JSON.parse(raw);
+    return Object.assign(defaultData(), parsed);
+  }catch(e){
+    return defaultData();
+  }
+}
+function saveDB(){
+  localStorage.setItem(STORE_KEY, JSON.stringify(DB));
+}
+function uid(prefix="id"){
+  return prefix + "_" + Math.random().toString(16).slice(2) + "_" + Date.now().toString(16);
+}
+function egp(n){
+  n = Number(n||0);
+  return n.toLocaleString("ar-EG", {maximumFractionDigits:2});
+}
+function todayISO(){
+  const d = new Date();
+  const z = (x)=> String(x).padStart(2,"0");
+  return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`;
+}
+function toast(title, sub=""){
+  const el = document.getElementById("toast");
+  document.getElementById("toastT").textContent = title;
+  document.getElementById("toastS").textContent = sub;
+  el.classList.add("show");
+  clearTimeout(window.__toastT);
+  window.__toastT = setTimeout(()=>el.classList.remove("show"), 2800);
+}
+
+// ======= تنقل =======
+function go(where){
+  const map = {home:"sec-home", bookings:"sec-bookings", cash:"sec-cash", stock:"sec-stock", hr:"sec-hr", users:"sec-users", backup:"sec-backup"};
+  document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
+  document.getElementById(map[where] || "sec-home").classList.add("active");
+
+  document.querySelectorAll("#nav .btn").forEach(b=>b.classList.remove("active"));
+  document.querySelector(`#nav .btn[data-go="${where}"]`)?.classList.add("active");
+
+  refreshAll();
+}
+
+document.getElementById("nav").addEventListener("click", (e)=>{
+  const btn = e.target.closest("button[data-go]");
+  if(!btn) return;
+  go(btn.dataset.go);
+});
+
+// ======= مودال =======
+function openModal(title, html){
+  document.getElementById("modalTitle").textContent = title;
+  const c = document.getElementById("modalContent");
+  c.innerHTML = html;
+  document.getElementById("modalBack").classList.add("show");
+}
+function closeModal(){
+  document.getElementById("modalBack").classList.remove("show");
+  document.getElementById("modalContent").innerHTML = "";
+}
+document.getElementById("modalBack").addEventListener("click", (e)=>{
+  if(e.target.id==="modalBack") closeModal();
+});
+
+// ======= تهيئة عامة =======
+function init(){
+  // set today defaults
+  ["cashDate","purDate","outDate","invDate","attDate","empTxDate"].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.value = todayISO();
+  });
+
+  initCalendarSelectors();
+  refreshAll();
+}
+
+function initCalendarSelectors(){
+  const m = document.getElementById("calMonth");
+  const y = document.getElementById("calYear");
+  const months = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+  m.innerHTML = months.map((name,i)=>`<option value="${i}">${name}</option>`).join("");
+  const thisYear = new Date().getFullYear();
+  let ys = [];
+  for(let yy=thisYear-3; yy<=thisYear+3; yy++) ys.push(`<option value="${yy}">${yy}</option>`);
+  y.innerHTML = ys.join("");
+  m.value = new Date().getMonth();
+  y.value = thisYear;
+  m.addEventListener("change", ()=>{renderCalendar(); refreshBookings(); updateHomeKPIs();});
+  y.addEventListener("change", ()=>{renderCalendar(); refreshBookings(); updateHomeKPIs();});
+  document.getElementById("bkSearch").addEventListener("input", refreshBookings);
+  document.getElementById("bkFilterDate").addEventListener("change", refreshBookings);
+}
+
+// ======= الرئيسية KPIs =======
+function updateHomeKPIs(){
+  // month bookings
+  const month = Number(document.getElementById("calMonth").value);
+  const year  = Number(document.getElementById("calYear").value);
+  const from = new Date(year, month, 1);
+  const to   = new Date(year, month+1, 1);
+  const monthBookings = DB.bookings.filter(b=>{
+    const d = new Date(b.date);
+    return d>=from && d<to;
+  });
+
+  document.getElementById("kpiMonthBookings").textContent = monthBookings.length;
+  document.getElementById("kpiMonthBookingsSub").textContent = monthBookings.length ? "حجوزات ضمن الشهر المحدد" : "لا يوجد";
+
+  const remaining = DB.bookings.reduce((s,b)=> s + Number(b.remaining||0), 0);
+  document.getElementById("kpiRemaining").textContent = egp(remaining);
+
+  const sumIn = DB.cash.filter(x=>x.type==="in").reduce((s,x)=>s+Number(x.amount||0),0);
+  const sumOut= DB.cash.filter(x=>x.type==="out").reduce((s,x)=>s+Number(x.amount||0),0);
+  document.getElementById("kpiCashNet").textContent = egp(sumIn - sumOut);
+
+  document.getElementById("kpiItems").textContent = DB.items.length;
+}
+
+function refreshAll(){
+  updateAuthUI();
+  refreshBookings();
+  renderCalendar();
+  refreshCash();
+  refreshStock();
+  refreshHR();
+  refreshUsers();
+  updateHomeKPIs();
+}
+
+// ======= الحجوزات =======
+function resetBookingFilters(){
+  document.getElementById("bkSearch").value = "";
+  document.getElementById("bkFilterDate").value = "";
+  refreshBookings();
+}
+
+function openCalendarLegend(){
+  openModal("مفتاح الألوان", `
+    <div class="help">اليوم يتلوّن عند وجود حجز.</div>
+    <div class="hr"></div>
+    <div class="row">
+      <span class="badge ok">متاح</span>
+      <span class="badge warn">يوجد حجز/حجوزات</span>
+      <span class="badge danger">عجز (في الجرد)</span>
+    </div>
+  `);
+}
+
+function openBookingModal(editId=null){
+  const halls = DB.halls;
+  const b = editId ? DB.bookings.find(x=>x.id===editId) : null;
+
+  openModal(editId? "تعديل حجز":"إضافة حجز", `
+    <div class="grid cols2">
+      <div class="card" style="box-shadow:none">
+        <div class="bd">
+          <div class="row">
+            <div class="field">
+              <label>القاعة</label>
+              <select id="mHall">${halls.map(h=>`<option ${b&&b.hall===h?"selected":""} value="${h}">${h}</option>`).join("")}</select>
+            </div>
+            <div class="field">
+              <label>التاريخ</label>
+              <input id="mDate" type="date" value="${b?b.date:todayISO()}" />
+            </div>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label>الفترة</label>
+              <select id="mPeriod">
+                <option value="صباحية" ${b&&b.period==="صباحية"?"selected":""}>صباحية</option>
+                <option value="مسائية" ${b&&b.period==="مسائية"?"selected":""}>مسائية</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>اسم العميل</label>
+              <input id="mName" value="${b?esc(b.name):""}" placeholder="اسم العميل" />
+            </div>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label>رقم الهاتف</label>
+              <input id="mPhone" value="${b?esc(b.phone):""}" placeholder="01xxxxxxxxx" />
+            </div>
+            <div class="field">
+              <label>إجمالي الحجز (جنيه)</label>
+              <input id="mTotal" type="number" step="0.01" value="${b?Number(b.total||0):""}" placeholder="0" />
+            </div>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label>المدفوع (جنيه)</label>
+              <input id="mPaid" type="number" step="0.01" value="${b?Number(b.paid||0):""}" placeholder="0" />
+            </div>
+            <div class="field">
+              <label>ملاحظات</label>
+              <input id="mNote" value="${b?esc(b.note||""):""}" placeholder="اختياري" />
+            </div>
+          </div>
+          <div class="row" style="margin-top:12px">
+            <button class="btn ok" onclick="${editId?`saveBookingEdit('${editId}')`:"saveBookingNew()"}">${editId?"حفظ التعديل":"إضافة حجز"}</button>
+            ${editId?`<button class="btn danger" onclick="deleteBooking('${editId}')">حذف</button>`:""}
+          </div>
+          <div class="help" style="margin-top:10px">سيتم حساب المتبقي تلقائياً = الإجمالي - المدفوع.</div>
+        </div>
+      </div>
+      <div class="card" style="box-shadow:none">
+        <div class="bd">
+          <div class="help">
+            خدمات يوم الحجز (سيتم تطويرها لاحقاً داخل “ورقة التكاليف/الخدمات”). حالياً يتم تسجيل بيانات الحجز الأساسية.
+          </div>
+          <div class="hr"></div>
+          <div class="smallNote">لو عايز إضافة خدمات ثابتة (كوشة، DJ… إلخ) كسعر بيع فقط في صفحة مستقلة: هنضيفها في “مرحلة 2”.</div>
+        </div>
+      </div>
+    </div>
+  `);
+}
+
+function esc(s){ return String(s||"").replaceAll("&","&").replaceAll("<","<").replaceAll(">",">").replaceAll('"',"""); }
+
+function saveBookingNew(){
+  const hall = val("mHall");
+  const date = val("mDate");
+  const period = val("mPeriod");
+  const name = val("mName").trim();
+  const phone= val("mPhone").trim();
+  const total= Number(val("mTotal")||0);
+  const paid = Number(val("mPaid")||0);
+  const note = val("mNote").trim();
+
+  if(!hall || !date || !period || !name || !phone || !total){
+    alert("يرجى إدخال جميع البيانات المطلوبة");
+    return;
+  }
+  const remaining = Math.max(0, total - paid);
+
+  DB.bookings.push({id:uid("bk"), hall, date, period, name, phone, total, paid, remaining, note});
+  saveDB();
+  closeModal();
+  toast("تم إضافة الحجز", `${name} • ${hall} • ${date} (${period})`);
+  refreshBookings();
+  renderCalendar();
+  updateHomeKPIs();
+}
+
+function saveBookingEdit(id){
+  const b = DB.bookings.find(x=>x.id===id);
+  if(!b) return;
+
+  b.hall = val("mHall");
+  b.date = val("mDate");
+  b.period = val("mPeriod");
+  b.name = val("mName").trim();
+  b.phone= val("mPhone").trim();
+  b.total= Number(val("mTotal")||0);
+  b.paid = Number(val("mPaid")||0);
+  b.note = val("mNote").trim();
+  if(!b.hall || !b.date || !b.period || !b.name || !b.phone || !b.total){
+    alert("يرجى إدخال جميع البيانات المطلوبة");
+    return;
+  }
+  b.remaining = Math.max(0, b.total - b.paid);
+  saveDB();
+  closeModal();
+  toast("تم تعديل الحجز", `${b.name} • ${b.hall}`);
+  refreshBookings();
+  renderCalendar();
+  updateHomeKPIs();
+}
+
+function deleteBooking(id){
+  if(!confirm("تأكيد حذف الحجز؟")) return;
+  DB.bookings = DB.bookings.filter(x=>x.id!==id);
+  saveDB();
+  closeModal();
+  toast("تم حذف الحجز");
+  refreshBookings();
+  renderCalendar();
+  updateHomeKPIs();
+}
+
+function bookingMatchesFilters(b){
+  const q = (document.getElementById("bkSearch").value||"").trim();
+  const d = (document.getElementById("bkFilterDate").value||"").trim();
+  if(q){
+    const qq = q.toLowerCase();
+    if(!(String(b.name||"").toLowerCase().includes(qq))) return false;
+  }
+  if(d && b.date !== d) return false;
+  return true;
+}
+
+function refreshBookings(){
+  const tbody = document.getElementById("bookingsTbody");
+  if(!tbody) return;
+
+  const list = DB.bookings
+    .filter(bookingMatchesFilters)
+    .sort((a,b)=> (a.date+b.period).localeCompare(b.date+b.period));
+
+  tbody.innerHTML = list.map(b=>`
+    <tr>
+      <td>${b.date}</td>
+      <td><span class="badge ${b.period==="مسائية"?"warn":"ok"}">${b.period}</span></td>
+      <td>${b.hall}</td>
+      <td>${esc(b.name)}</td>
+      <td>${esc(b.phone)}</td>
+      <td>${egp(b.total)}</td>
+      <td>${egp(b.paid)}</td>
+      <td><span class="badge ${b.remaining>0?"warn":"ok"}">${egp(b.remaining)}</span></td>
+      <td>
+        <button class="btn secondary small" onclick="openBookingModal('${b.id}')">تعديل</button>
+      </td>
+    </tr>
+  `).join("") || `<tr><td colspan="9" class="mini">لا يوجد بيانات</td></tr>`;
+
+  document.getElementById("bkCountPill").textContent = "عدد الحجوزات: " + list.length;
+  const rem = list.reduce((s,x)=>s+Number(x.remaining||0),0);
+  document.getElementById("bkRemainingPill").textContent = "إجمالي المتبقي: " + egp(rem);
+}
+
+function renderCalendar(){
+  const cal = document.getElementById("calendar");
+  if(!cal) return;
+
+  const month = Number(document.getElementById("calMonth").value);
+  const year  = Number(document.getElementById("calYear").value);
+
+  const dow = ["الأحد","الإثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
+  const start = new Date(year, month, 1);
+  const end = new Date(year, month+1, 0);
+  const firstDay = start.getDay();
+  const daysInMonth = end.getDate();
+
+  let html = "";
+  // header row (dow)
+  html += dow.map(d=>`<div class="dow">${d}</div>`).join("");
+
+  // leading blanks
+  for(let i=0;i<firstDay;i++){
+    html += `<div class="day muted"><div class="num">—</div></div>`;
+  }
+
+  for(let day=1; day<=daysInMonth; day++){
+    const dateISO = `${year}-${String(month+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+    const dayBookings = DB.bookings.filter(b=>b.date===dateISO);
+    const has = dayBookings.length>0;
+    let hallsHtml = DB.halls.map(h=>{
+      const hb = dayBookings.filter(b=>b.hall===h);
+      const booked = hb.length>0;
+      const text = booked ? `${hb.length} حجز` : "متاح";
+      const cls = booked ? "hallBox booked" : "hallBox";
+      return `<div class="${cls}"><span class="t">${h.replace("قاعة ","")}</span><span class="p">${text}</span></div>`;
+    }).join("");
+
+    html += `
+      <div class="day ${has?"hasBookings":""}" onclick="openDay('${dateISO}')">
+        <div class="num">${day}</div>
+        <div class="halls">${hallsHtml}</div>
+      </div>
+    `;
+  }
+
+  // trailing blanks to complete grid (optional)
+  cal.innerHTML = html;
+}
+
+function openDay(dateISO){
+  const list = DB.bookings.filter(b=>b.date===dateISO).sort((a,b)=>a.hall.localeCompare(b.hall));
+  const rows = list.map(b=>`
+    <tr>
+      <td>${b.hall}</td>
+      <td>${b.period}</td>
+      <td>${esc(b.name)}</td>
+      <td>${esc(b.phone)}</td>
+      <td>${egp(b.total)}</td>
+      <td>${egp(b.paid)}</td>
+      <td>${egp(b.remaining)}</td>
+      <td><button class="btn secondary small" onclick="openBookingModal('${b.id}')">تعديل</button></td>
+    </tr>
+  `).join("");
+
+  openModal(`حجوزات يوم ${dateISO}`, `
+    <div class="row spread">
+      <div class="help">${list.length?`عدد الحجوزات: ${list.length}`:"لا يوجد حجوزات"}</div>
+      <button class="btn small" onclick="openBookingModal()">إضافة حجز</button>
+    </div>
+    <div class="hr"></div>
+    <div class="tableWrap">
+      <table style="min-width:820px">
+        <thead>
+          <tr>
+            <th>القاعة</th><th>الفترة</th><th>العميل</th><th>الهاتف</th><th>إجمالي</th><th>مدفوع</th><th>متبقي</th><th>إجراء</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows || `<tr><td colspan="8" class="mini">لا يوجد</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  `);
+}
+
+// ======= الصندوق =======
+function fillTodayCash(){ document.getElementById("cashDate").value = todayISO(); }
+function val(id){ return document.getElementById(id)?.value ?? ""; }
+
+function addCash(){
+  const date = val("cashDate") || todayISO();
+  const type = val("cashType");
+  const dept = val("cashDept");
+  const amount = Number(val("cashAmount")||0);
+  const note = val("cashNote").trim();
+  if(!date || !type || !dept || !amount){
+    alert("يرجى إدخال البيانات المطلوبة");
+    return;
+  }
+  DB.cash.push({id:uid("cash"), date, type, dept, amount, note});
+  saveDB();
+  toast("تم حفظ حركة الصندوق");
+  document.getElementById("cashAmount").value = "";
+  document.getElementById("cashNote").value = "";
+  refreshCash();
+  updateHomeKPIs();
+}
+
+let cashRange = {from:"", to:""};
+function applyCashRange(){
+  cashRange.from = val("cashFrom");
+  cashRange.to = val("cashTo");
+  refreshCash();
+}
+function resetCashRange(){
+  cashRange = {from:"",to:""};
+  document.getElementById("cashFrom").value = "";
+  document.getElementById("cashTo").value = "";
+  refreshCash();
+}
+
+function cashInRange(x){
+  if(cashRange.from && x.date < cashRange.from) return false;
+  if(cashRange.to && x.date > cashRange.to) return false;
+  return true;
+}
+
+function deptName(dept){
+  return ({
+    restaurant_cafe:"المطعم والكافيه",
+    halls:"القاعات",
+    kids:"كيدز اريا",
+    other:"أخرى"
+  })[dept] || dept;
+}
+
+function refreshCash(){
+  const tbody = document.getElementById("cashTbody");
+  if(!tbody) return;
+
+  const list = DB.cash.filter(cashInRange).sort((a,b)=> b.date.localeCompare(a.date));
+  tbody.innerHTML = list.map(x=>`
+    <tr>
+      <td>${x.date}</td>
+      <td><span class="badge ${x.type==="in"?"ok":"warn"}">${x.type==="in"?"مقبوضات":"مدفوعات"}</span></td>
+      <td>${deptName(x.dept)}</td>
+      <td>${egp(x.amount)}</td>
+      <td>${esc(x.note||"")}</td>
+      <td><button class="btn danger small" onclick="delCash('${x.id}')">حذف</button></td>
+    </tr>
+  `).join("") || `<tr><td colspan="6" class="mini">لا يوجد</td></tr>`;
+
+  const sumIn = list.filter(x=>x.type==="in").reduce((s,x)=>s+Number(x.amount||0),0);
+  const sumOut= list.filter(x=>x.type==="out").reduce((s,x)=>s+Number(x.amount||0),0);
+  const net = sumIn - sumOut;
+
+  document.getElementById("cashSumIn").textContent = egp(sumIn);
+  document.getElementById("cashSumOut").textContent = egp(sumOut);
+  document.getElementById("cashNet").textContent = egp(net);
+  document.getElementById("cashCount").textContent = list.length;
+  document.getElementById("cashPill").textContent = "صافي: " + egp(net);
+}
+
+function delCash(id){
+  if(!confirm("تأكيد حذف الحركة؟")) return;
+  DB.cash = DB.cash.filter(x=>x.id!==id);
+  saveDB();
+  refreshCash();
+  updateHomeKPIs();
+}
+
+// ======= المخزون =======
+function resetItemForm(){
+  ["itemName","itemQty","itemNote"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("itemUnit").value="وحدة";
+  window.__editItemId = null;
+}
+function saveItem(){
+  const name = val("itemName").trim();
+  const unit = val("itemUnit");
+  const qty0 = Number(val("itemQty")||0);
+  const note = val("itemNote").trim();
+
+  if(!name){ alert("اكتب اسم الصنف"); return; }
+
+  const existing = DB.items.find(i=> i.name===name && (!window.__editItemId || i.id!==window.__editItemId));
+  if(existing){ alert("هذا الصنف موجود بالفعل"); return; }
+
+  if(window.__editItemId){
+    const it = DB.items.find(i=>i.id===window.__editItemId);
+    if(!it) return;
+    it.name=name; it.unit=unit; it.qty0=qty0; it.note=note;
+    toast("تم تعديل الصنف");
+  }else{
+    DB.items.push({id:uid("it"), name, unit, qty0, note});
+    toast("تم إضافة الصنف");
+  }
+
+  saveDB();
+  resetItemForm();
+  refreshStock();
+  updateHomeKPIs();
+}
+
+function fillTodayPurchase(){ document.getElementById("purDate").value=todayISO(); }
+function addPurchase(){
+  const date = val("purDate")||todayISO();
+  const itemId = val("purItem");
+  const qty = Number(val("purQty")||0);
+  const supplier = val("purSupplier").trim();
+  const cost = Number(val("purCost")||0);
+  const note = val("purNote").trim();
+  if(!date || !itemId || !qty){
+    alert("يرجى إدخال البيانات المطلوبة");
+    return;
+  }
+  DB.purchases.push({id:uid("pur"), date, itemId, qty, supplier, cost, note});
+  saveDB();
+  toast("تم إضافة مشتريات");
+  ["purQty","purSupplier","purCost","purNote"].forEach(id=>document.getElementById(id).value="");
+  refreshStock();
+  updateHomeKPIs();
+}
+
+function fillTodayOut(){ document.getElementById("outDate").value=todayISO(); }
+function addOut(){
+  const date = val("outDate")||todayISO();
+  const itemId = val("outItem");
+  const qty = Number(val("outQty")||0);
+  const note = val("outNote").trim();
+  if(!date || !itemId || !qty){
+    alert("يرجى إدخال البيانات المطلوبة");
+    return;
+  }
+  DB.stockOut.push({id:uid("out"), date, itemId, qty, note});
+  saveDB();
+  toast("تم تسجيل المنصرف");
+  ["outQty","outNote"].forEach(id=>document.getElementById(id).value="");
+  refreshStock();
+  updateHomeKPIs();
+}
+
+function fillTodayInv(){ document.getElementById("invDate").value=todayISO(); }
+function addInventoryCheck(){
+  const date = val("invDate")||todayISO();
+  const itemId = val("invItem");
+  const actual = Number(val("invActual")||0);
+  const note = val("invNote").trim();
+  if(!date || !itemId){
+    alert("يرجى إدخال البيانات المطلوبة");
+    return;
+  }
+  DB.inventoryChecks.push({id:uid("inv"), date, itemId, actual, note});
+  saveDB();
+  toast("تم حفظ الجرد");
+  ["invActual","invNote"].forEach(id=>document.getElementById(id).value="");
+  refreshStock();
+}
+
+function itemById(id){ return DB.items.find(i=>i.id===id); }
+function sumPurchases(itemId){ return DB.purchases.filter(p=>p.itemId===itemId).reduce((s,p)=>s+Number(p.qty||0),0); }
+function sumOut(itemId){ return DB.stockOut.filter(o=>o.itemId===itemId).reduce((s,o)=>s+Number(o.qty||0),0); }
+function currentQty(it){
+  return Number(it.qty0||0) + sumPurchases(it.id) - sumOut(it.id);
+}
+
+function refreshStock(){
+  // fill selects
+  const opts = DB.items.map(i=>`<option value="${i.id}">${i.name} (${i.unit})</option>`).join("");
+  ["purItem","outItem","invItem"].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.innerHTML = `<option value="">اختر...</option>` + opts;
+  });
+
+  // items table
+  const tbody = document.getElementById("itemsTbody");
+  if(tbody){
+    tbody.innerHTML = DB.items.map(it=>{
+      const pur = sumPurchases(it.id);
+      const out = sumOut(it.id);
+      const cur = currentQty(it);
+      return `
+        <tr>
+          <td>${esc(it.name)}</td>
+          <td>${esc(it.unit)}</td>
+          <td>${egp(it.qty0)}</td>
+          <td>${egp(pur)}</td>
+          <td>${egp(out)}</td>
+          <td><span class="badge ${cur<0?"danger":(cur===0?"warn":"ok")}">${egp(cur)}</span></td>
+          <td>
+            <button class="btn secondary small" onclick="editItem('${it.id}')">تعديل</button>
+            <button class="btn danger small" onclick="delItem('${it.id}')">حذف</button>
+          </td>
+        </tr>
+      `;
+    }).join("") || `<tr><td colspan="7" class="mini">لا يوجد أصناف</td></tr>`;
+  }
+
+  // purchases table
+  const pt = document.getElementById("purTbody");
+  if(pt){
+    const list = DB.purchases.slice().sort((a,b)=> b.date.localeCompare(a.date));
+    pt.innerHTML = list.map(p=>{
+      const it = itemById(p.itemId);
+      return `
+        <tr>
+          <td>${p.date}</td>
+          <td>${esc(it?it.name:"—")}</td>
+          <td>${egp(p.qty)} <span class="mini">${esc(it?it.unit:"")}</span></td>
+          <td>${esc(p.supplier||"")}</td>
+          <td>${p.cost?egp(p.cost):"—"}</td>
+          <td><button class="btn danger small" onclick="delPurchase('${p.id}')">حذف</button></td>
+        </tr>
+      `;
+    }).join("") || `<tr><td colspan="6" class="mini">لا يوجد</td></tr>`;
+  }
+
+  // out table
+  const ot = document.getElementById("outTbody");
+  if(ot){
+    const list = DB.stockOut.slice().sort((a,b)=> b.date.localeCompare(a.date));
+    ot.innerHTML = list.map(o=>{
+      const it = itemById(o.itemId);
+      return `
+        <tr>
+          <td>${o.date}</td>
+          <td>${esc(it?it.name:"—")}</td>
+          <td>${egp(o.qty)} <span class="mini">${esc(it?it.unit:"")}</span></td>
+          <td>${esc(o.note||"")}</td>
+          <td><button class="btn danger small" onclick="delOut('${o.id}')">حذف</button></td>
+        </tr>
+      `;
+    }).join("") || `<tr><td colspan="5" class="mini">لا يوجد</td></tr>`;
+  }
+
+  // inventory table
+  const itb = document.getElementById("invTbody");
+  if(itb){
+    const list = DB.inventoryChecks.slice().sort((a,b)=> b.date.localeCompare(a.date));
+    itb.innerHTML = list.map(x=>{
+      const it = itemById(x.itemId);
+      const recorded = it ? currentQty(it) : 0;
+      const actual = Number(x.actual||0);
+      const diff = actual - recorded;
+      const state = diff===0 ? "مطابق" : (diff<0 ? "عجز" : "زيادة");
+      const cls = diff===0 ? "ok" : (diff<0 ? "danger" : "warn");
+      return `
+        <tr>
+          <td>${x.date}</td>
+          <td>${esc(it?it.name:"—")}</td>
+          <td>${egp(recorded)}</td>
+          <td>${egp(actual)}</td>
+          <td>${egp(diff)}</td>
+          <td><span class="badge ${cls}">${state}</span></td>
+          <td><button class="btn danger small" onclick="delInv('${x.id}')">حذف</button></td>
+        </tr>
+      `;
+    }).join("") || `<tr><td colspan="7" class="mini">لا يوجد</td></tr>`;
+  }
+
+  // pills
+  document.getElementById("stockItemsPill").textContent = "الأصناف: " + DB.items.length;
+  const sumCur = DB.items.reduce((s,it)=> s + currentQty(it), 0);
+  document.getElementById("stockValuePill").textContent = "رصيد كمي: " + egp(sumCur);
+
+  document.getElementById("stockItemsPill").title = "عدد الأصناف";
+  document.getElementById("stockValuePill").title = "إجمالي الرصيد الكمي (للإشارة فقط)";
+
+  document.getElementById("stockItemsPill").className = "pill";
+  document.getElementById("stockValuePill").className = "pill";
+
+  document.getElementById("stockItemsPill").textContent = "الأصناف: " + DB.items.length;
+  document.getElementById("stockValuePill").textContent = "رصيد كمي: " + egp(sumCur);
+
+  // update global kpi item count
+  document.getElementById("kpiItems").textContent = DB.items.length;
+}
+
+function editItem(id){
+  const it = DB.items.find(i=>i.id===id);
+  if(!it) return;
+  window.__editItemId = id;
+  document.getElementById("itemName").value = it.name;
+  document.getElementById("itemUnit").value = it.unit;
+  document.getElementById("itemQty").value = it.qty0;
+  document.getElementById("itemNote").value = it.note||"";
+  toast("يمكنك تعديل الصنف ثم حفظ");
+}
+
+function delItem(id){
+  if(!confirm("حذف الصنف؟ سيتم حذف ارتباطاته بالمشتريات والمنصرف والجرد.")) return;
+  DB.items = DB.items.filter(i=>i.id!==id);
+  DB.purchases = DB.purchases.filter(p=>p.itemId!==id);
+  DB.stockOut = DB.stockOut.filter(o=>o.itemId!==id);
+  DB.inventoryChecks = DB.inventoryChecks.filter(x=>x.itemId!==id);
+  saveDB();
+  refreshStock();
+  updateHomeKPIs();
+}
+
+function delPurchase(id){
+  if(!confirm("حذف المشتريات؟")) return;
+  DB.purchases = DB.purchases.filter(p=>p.id!==id);
+  saveDB();
+  refreshStock();
+  updateHomeKPIs();
+}
+function delOut(id){
+  if(!confirm("حذف المنصرف؟")) return;
+  DB.stockOut = DB.stockOut.filter(o=>o.id!==id);
+  saveDB();
+  refreshStock();
+  updateHomeKPIs();
+}
+function delInv(id){
+  if(!confirm("حذف سجل الجرد؟")) return;
+  DB.inventoryChecks = DB.inventoryChecks.filter(x=>x.id!==id);
+  saveDB();
+  refreshStock();
+}
+
+function openStockBalance(){
+  const rows = DB.items.map(it=>{
+    const cur = currentQty(it);
+    return `<tr><td>${esc(it.name)}</td><td>${esc(it.unit)}</td><td>${egp(cur)}</td></tr>`;
+  }).join("");
+
+  openModal("رصيد المخزن (كل الأصناف)", `
+    <div class="tableWrap">
+      <table style="min-width:520px">
+        <thead><tr><th>الصنف</th><th>الوحدة</th><th>الرصيد الحالي</th></tr></thead>
+        <tbody>${rows || `<tr><td colspan="3" class="mini">لا يوجد</td></tr>`}</tbody>
+      </table>
+    </div>
+  `);
+}
+
+// ======= شؤون العاملين =======
+function resetEmpForm(){
+  ["empName","empRole","empSalary","empNote"].forEach(id=>document.getElementById(id).value="");
+}
+function addEmployee(){
+  const name = val("empName").trim();
+  const role = val("empRole").trim();
+  const salary = Number(val("empSalary")||0);
+  const note = val("empNote").trim();
+  if(!name || !salary){
+    alert("يرجى إدخال الاسم والراتب");
+    return;
+  }
+  DB.employees.push({id:uid("emp"), name, role, salary, note});
+  saveDB();
+  toast("تم إضافة عامل");
+  resetEmpForm();
+  refreshHR();
+}
+
+function fillTodayAtt(){ document.getElementById("attDate").value=todayISO(); }
+function addAttendance(){
+  const date = val("attDate")||todayISO();
+  const empId = val("attEmp");
+  const tin = val("attIn");
+  const tout= val("attOut");
+  if(!date || !empId || !tin || !tout){
+    alert("يرجى إدخال جميع البيانات المطلوبة");
+    return;
+  }
+  DB.attendance.push({id:uid("att"), date, empId, tin, tout});
+  saveDB();
+  toast("تم حفظ الحضور/الانصراف");
+  refreshHR();
+}
+
+function fillTodayEmpTx(){ document.getElementById("empTxDate").value=todayISO(); }
+function addEmpTx(){
+  const date = val("empTxDate")||todayISO();
+  const empId = val("empTxEmp");
+  const type = val("empTxType");
+  const amount = Number(val("empTxAmount")||0);
+  const note = val("empTxNote").trim();
+  if(!date || !empId || !type || !amount){
+    alert("يرجى إدخال البيانات المطلوبة");
+    return;
+  }
+  DB.empTx.push({id:uid("etx"), date, empId, type, amount, note});
+  saveDB();
+  toast("تم حفظ الحركة");
+  ["empTxAmount","empTxNote"].forEach(id=>document.getElementById(id).value="");
+  refreshHR();
+}
+
+function refreshHR(){
+  // fill selects
+  const opts = DB.employees.map(e=>`<option value="${e.id}">${e.name}</option>`).join("");
+  ["attEmp","empTxEmp"].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.innerHTML = `<option value="">اختر...</option>` + opts;
+  });
+
+  document.getElementById("empCountPill").textContent = "عدد العاملين: " + DB.employees.length;
+
+  // employees table
+  const tb = document.getElementById("empTbody");
+  if(tb){
+    tb.innerHTML = DB.employees.map(e=>{
+      const daily = Number(e.salary||0)/30;
+      return `
+        <tr>
+          <td>${esc(e.name)}</td>
+          <td>${esc(e.role||"")}</td>
+          <td>${egp(e.salary)}</td>
+          <td>${egp(daily)}</td>
+          <td>${esc(e.note||"")}</td>
+          <td>
+            <button class="btn danger small" onclick="delEmp('${e.id}')">حذف</button>
+          </td>
+        </tr>
+      `;
+    }).join("") || `<tr><td colspan="6" class="mini">لا يوجد</td></tr>`;
+  }
+
+  // attendance table
+  const at = document.getElementById("attTbody");
+  if(at){
+    const list = DB.attendance.slice().sort((a,b)=> b.date.localeCompare(a.date));
+    at.innerHTML = list.map(x=>{
+      const e = DB.employees.find(z=>z.id===x.empId);
+      return `
+        <tr>
+          <td>${x.date}</td>
+          <td>${esc(e?e.name:"—")}</td>
+          <td>${x.tin}</td>
+          <td>${x.tout}</td>
+          <td class="mini">—</td>
+          <td><button class="btn danger small" onclick="delAtt('${x.id}')">حذف</button></td>
+        </tr>
+      `;
+    }).join("") || `<tr><td colspan="6" class="mini">لا يوجد</td></tr>`;
+  }
+
+  // emp tx table
+  const et = document.getElementById("empTxTbody");
+  if(et){
+    const list = DB.empTx.slice().sort((a,b)=> b.date.localeCompare(a.date));
+    et.innerHTML = list.map(x=>{
+      const e = DB.employees.find(z=>z.id===x.empId);
+      const t = ({advance:"سلفة", bonus:"مكافأة", penalty:"جزاء"})[x.type] || x.type;
+      const cls = x.type==="bonus" ? "ok" : (x.type==="penalty" ? "danger" : "warn");
+      return `
+        <tr>
+          <td>${x.date}</td>
+          <td>${esc(e?e.name:"—")}</td>
+          <td><span class="badge ${cls}">${t}</span></td>
+          <td>${egp(x.amount)}</td>
+          <td>${esc(x.note||"")}</td>
+          <td><button class="btn danger small" onclick="delEmpTx('${x.id}')">حذف</button></td>
+        </tr>
+      `;
+    }).join("") || `<tr><td colspan="6" class="mini">لا يوجد</td></tr>`;
+  }
+}
+
+function delEmp(id){
+  if(!confirm("حذف العامل؟ سيتم حذف الحضور والحركات المالية المرتبطة.")) return;
+  DB.employees = DB.employees.filter(e=>e.id!==id);
+  DB.attendance= DB.attendance.filter(a=>a.empId!==id);
+  DB.empTx     = DB.empTx.filter(t=>t.empId!==id);
+  saveDB();
+  refreshHR();
+}
+function delAtt(id){
+  if(!confirm("حذف السجل؟")) return;
+  DB.attendance = DB.attendance.filter(a=>a.id!==id);
+  saveDB();
+  refreshHR();
+}
+function delEmpTx(id){
+  if(!confirm("حذف الحركة؟")) return;
+  DB.empTx = DB.empTx.filter(x=>x.id!==id);
+  saveDB();
+  refreshHR();
+}
+
+function calcPayroll(){
+  const from = val("payFrom");
+  const to = val("payTo");
+  if(!from || !to){ alert("اختر فترة"); return; }
+
+  const daysBetween = (a,b)=>{
+    const d1 = new Date(a), d2 = new Date(b);
+    const ms = 24*3600*1000;
+    return Math.floor((d2 - d1)/ms) + 1;
+  };
+
+  const days = daysBetween(from, to);
+  let html = `<div class="help">الفترة: ${from} → ${to} (${days} يوم)</div><div class="hr"></div>`;
+  html += `<div class="tableWrap"><table style="min-width:820px"><thead><tr>
+    <th>العامل</th><th>الراتب الشهري</th><th>المستحق (تقديري)</th><th>سلف</th><th>مكافآت</th><th>جزاءات</th><th>الصافي</th>
+  </tr></thead><tbody>`;
+
+  DB.employees.forEach(e=>{
+    const daily = Number(e.salary||0)/30;
+    // تقدير: المستحق = daily * عدد أيام الفترة
+    const base = daily * days;
+
+    const tx = DB.empTx.filter(x=> x.empId===e.id && x.date>=from && x.date<=to);
+    const adv = tx.filter(x=>x.type==="advance").reduce((s,x)=>s+Number(x.amount||0),0);
+    const bon = tx.filter(x=>x.type==="bonus").reduce((s,x)=>s+Number(x.amount||0),0);
+    const pen = tx.filter(x=>x.type==="penalty").reduce((s,x)=>s+Number(x.amount||0),0);
+
+    const net = base - adv + bon - pen;
+
+    html += `<tr>
+      <td>${esc(e.name)}</td>
+      <td>${egp(e.salary)}</td>
+      <td>${egp(base)}</td>
+      <td>${egp(adv)}</td>
+      <td>${egp(bon)}</td>
+      <td>${egp(pen)}</td>
+      <td><span class="badge ${net>=0?"ok":"danger"}">${egp(net)}</span></td>
+    </tr>`;
+  });
+
+  html += `</tbody></table></div>`;
+  document.getElementById("payrollResult").innerHTML = html;
+}
+function resetPayroll(){
+  document.getElementById("payFrom").value="";
+  document.getElementById("payTo").value="";
+  document.getElementById("payrollResult").textContent="اختر فترة واضغط “حساب”.";
+}
+
+// ======= المستخدمين/الصلاحيات =======
+function updateAuthUI(){
+  // دخول مباشر افتراضياً
+  document.getElementById("pillAuth").textContent = DB.authEnabled ? "الصلاحيات مفعلة" : "الدخول مباشر";
+  document.getElementById("pillAuth").className = DB.authEnabled ? "pill warn" : "pill ok";
+
+  document.getElementById("authEnabledPill").textContent = DB.authEnabled ? "الصلاحيات: مفعلة" : "الصلاحيات: غير مفعلة";
+  document.getElementById("authEnabledPill").className = DB.authEnabled ? "pill warn" : "pill";
+}
+
+function toggleAuth(on){
+  DB.authEnabled = !!on;
+  saveDB();
+  updateAuthUI();
+  toast(on ? "تم تفعيل الصلاحيات" : "تم إيقاف الصلاحيات", "لن يتم فرض تسجيل دخول إلا إذا أضفنا شاشة تسجيل لاحقاً");
+}
+
+function roleName(role){
+  return ({
+    manager:"مدير",
+    accountant:"محاسب",
+    buyer:"مسؤول مشتريات",
+    storekeeper:"مسؤول مخزن",
+    attendance:"موظف حضور/انصراف"
+  })[role] || role;
+}
+
+function resetUserForm(){
+  ["uName","uDesc","uPass"].forEach(id=>document.getElementById(id).value="");
+  ["permBookings","permCash","permStock","permHr","permUsers","permDelete"].forEach(id=>document.getElementById(id).checked = (id!=="permUsers" && id!=="permDelete"));
+  document.getElementById("uRole").value="manager";
+}
+
+function addUser(){
+  const username = val("uName").trim();
+  const desc = val("uDesc").trim();
+  const password = val("uPass").trim();
+  const role = val("uRole");
+
+  if(!username){ alert("اكتب اسم المستخدم"); return; }
+  if(DB.users.some(u=>u.username===username)){ alert("اسم المستخدم موجود"); return; }
+
+  const perms = {
+    bookings: !!document.getElementById("permBookings").checked,
+    cash: !!document.getElementById("permCash").checked,
+    stock: !!document.getElementById("permStock").checked,
+    hr: !!document.getElementById("permHr").checked,
+    users: !!document.getElementById("permUsers").checked,
+    canDelete: !!document.getElementById("permDelete").checked
+  };
+
+  DB.users.push({id:uid("u"), username, desc, password, role, perms});
+  saveDB();
+  toast("تم إضافة المستخدم");
+  resetUserForm();
+  refreshUsers();
+}
+
+function refreshUsers(){
+  const tb = document.getElementById("usersTbody");
+  if(!tb) return;
+
+  tb.innerHTML = DB.users.map(u=>{
+    const p = [];
+    if(u.perms?.bookings) p.push("الحجوزات");
+    if(u.perms?.cash) p.push("الصندوق");
+    if(u.perms?.stock) p.push("المخزون");
+    if(u.perms?.hr) p.push("شؤون العاملين");
+    if(u.perms?.users) p.push("المستخدمين");
+    if(u.perms?.canDelete) p.push("حذف/تعديل");
+    return `
+      <tr>
+        <td>${esc(u.username)}</td>
+        <td>${esc(u.desc||"")}</td>
+        <td>${roleName(u.role)}</td>
+        <td class="mini">${p.join("، ") || "—"}</td>
+        <td>
+          <button class="btn secondary small" onclick="editUser('${u.id}')">تعديل</button>
+          <button class="btn danger small" onclick="delUser('${u.id}')">حذف</button>
+        </td>
+      </tr>
+    `;
+  }).join("") || `<tr><td colspan="5" class="mini">لا يوجد مستخدمين</td></tr>`;
+}
+
+function editUser(id){
+  const u = DB.users.find(x=>x.id===id);
+  if(!u) return;
+  openModal("تعديل مستخدم", `
+    <div class="row">
+      <div class="field">
+        <label>اسم المستخدم</label>
+        <input id="euName" value="${esc(u.username)}" />
+      </div>
+      <div class="field">
+        <label>الوصف</label>
+        <input id="euDesc" value="${esc(u.desc||"")}" />
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>الدور</label>
+        <select id="euRole">
+          <option value="manager" ${u.role==="manager"?"selected":""}>مدير</option>
+          <option value="accountant" ${u.role==="accountant"?"selected":""}>محاسب</option>
+          <option value="buyer" ${u.role==="buyer"?"selected":""}>مسؤول مشتريات</option>
+          <option value="storekeeper" ${u.role==="storekeeper"?"selected":""}>مسؤول مخزن</option>
+          <option value="attendance" ${u.role==="attendance"?"selected":""}>موظف حضور/انصراف</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>تغيير كلمة المرور (اختياري)</label>
+        <input id="euPass" placeholder="اتركه فارغ بدون تغيير" />
+      </div>
+    </div>
+    <div class="hr"></div>
+    <div class="help">الصلاحيات:</div>
+    <div class="row" style="margin-top:8px">
+      <label class="pill"><input type="checkbox" id="epBookings" ${u.perms?.bookings?"checked":""}/> الحجوزات</label>
+      <label class="pill"><input type="checkbox" id="epCash" ${u.perms?.cash?"checked":""}/> الصندوق</label>
+      <label class="pill"><input type="checkbox" id="epStock" ${u.perms?.stock?"checked":""}/> المخزون</label>
+      <label class="pill"><input type="checkbox" id="epHr" ${u.perms?.hr?"checked":""}/> شؤون العاملين</label>
+      <label class="pill"><input type="checkbox" id="epUsers" ${u.perms?.users?"checked":""}/> المستخدمين</label>
+      <label class="pill"><input type="checkbox" id="epDelete" ${u.perms?.canDelete?"checked":""}/> حذف/تعديل</label>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn ok" onclick="saveUserEdit('${u.id}')">حفظ</button>
+      <button class="btn danger" onclick="delUser('${u.id}')">حذف</button>
+    </div>
+  `);
+}
+
+function saveUserEdit(id){
+  const u = DB.users.find(x=>x.id===id);
+  if(!u) return;
+
+  const newName = val("euName").trim();
+  if(!newName){ alert("اسم المستخدم مطلوب"); return; }
+  if(DB.users.some(x=>x.username===newName && x.id!==id)){ alert("اسم المستخدم موجود"); return; }
+
+  u.username = newName;
+  u.desc = val("euDesc").trim();
+  u.role = val("euRole");
+  const newPass = val("euPass").trim();
+  if(newPass) u.password = newPass;
+
+  u.perms = {
+    bookings: !!document.getElementById("epBookings").checked,
+    cash: !!document.getElementById("epCash").checked,
+    stock: !!document.getElementById("epStock").checked,
+    hr: !!document.getElementById("epHr").checked,
+    users: !!document.getElementById("epUsers").checked,
+    canDelete: !!document.getElementById("epDelete").checked
+  };
+
+  saveDB();
+  closeModal();
+  toast("تم تعديل المستخدم");
+  refreshUsers();
+}
+
+function delUser(id){
+  if(!confirm("حذف المستخدم؟")) return;
+  DB.users = DB.users.filter(u=>u.id!==id);
+  saveDB();
+  closeModal();
+  refreshUsers();
+  toast("تم حذف المستخدم");
+}
+
+// ======= نسخ احتياطي =======
+function exportJSON(){
+  const data = JSON.stringify(DB, null, 2);
+  const blob = new Blob([data], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "backup_restocafe.json";
+  a.click();
+  URL.revokeObjectURL(url);
+  toast("تم تصدير نسخة احتياطية");
+}
+
+function importJSONFile(e){
+  const file = e.target.files?.[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    try{
+      const obj = JSON.parse(String(reader.result||""));
+      DB = Object.assign(defaultData(), obj);
+      saveDB();
+      toast("تم الاستيراد", "تم تحديث البيانات");
+      refreshAll();
+    }catch(err){
+      alert("ملف غير صالح");
+    }
+  };
+  reader.readAsText(file);
+}
+
+function doImport(){
+  const t = document.getElementById("impTxt").value.trim();
+  try{
+    const obj = JSON.parse(t);
+    DB = Object.assign(defaultData(), obj);
+    saveDB();
+    toast("تم الاستيراد");
+    refreshAll();
+    closeModal?.();
+  }catch(e){
+    toast("غير صالح", "JSON غير صالح");
+  }
+}
+
+function resetAllData(){
+  if(!confirm("تأكيد مسح كل البيانات؟")) return;
+  DB = defaultData();
+  saveDB();
+  toast("تم مسح البيانات");
+  refreshAll();
+}
+
+// ======= تشغيل =======
+window.addEventListener("load", init);
+<script>
+// ======= أدوات مساعدة إضافية =======
+
+// تحسين: دعم Array.prototype.at لو المتصفح قديم
+if(!Array.prototype.at){
+  Array.prototype.at = function(n){
+    n = Math.trunc(n) || 0;
+    if(n<0) n += this.length;
+    if(n<0 || n>=this.length) return undefined;
+    return this[n];
+  }
+}
+
+// ======= ربط أزرار “الدخول” في الرئيسية بالأقسام =======
+(function bindHomeButtons(){
+  // أحياناً بعض الأجهزة تمنع onclick ضمن HTML عند النقل/اللصق
+  // فنربط هنا event delegation للأزرار داخل الصفحة
+  document.addEventListener("click", (e)=>{
+    const btn = e.target.closest("button[data-nav]");
+    if(!btn) return;
+    const target = btn.getAttribute("data-nav");
+    if(target) go(target);
+  });
+})();
+
+// ======= تعديل صفحة الرئيسية لإظهار أزرار واضحة (بدون مشاكل عدم استجابة) =======
+(function patchHomeUI(){
+  const home = document.getElementById("sec-home");
+  if(!home) return;
+
+  // لو لم نضف بطاقات الرئيسية سابقاً، نتركها كما هي
+  // لكن نضيف بطاقة روابط سريعة ثابتة
+  const extra = document.createElement("div");
+  extra.className = "card";
+  extra.style.marginTop = "14px";
+  extra.innerHTML = `
+    <div class="hd">
+      <div>
+        <h3>الأقسام</h3>
+        <div class="desc">اضغط للدخول لأي قسم.</div>
+      </div>
+      <span class="pill">ملف واحد</span>
+    </div>
+    <div class="bd">
+      <div class="grid cols2">
+        <div class="card" style="box-shadow:none">
+          <div class="bd">
+            <div style="font-weight:900;font-size:16px;margin-bottom:10px">إدارة الحجوزات</div>
+            <div class="help">تقويم شهري + بحث + إجمالي المتبقي.</div>
+            <div style="margin-top:10px">
+              <button class="btn" data-nav="bookings">الدخول</button>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="box-shadow:none">
+          <div class="bd">
+            <div style="font-weight:900;font-size:16px;margin-bottom:10px">الإيرادات والمصروفات</div>
+            <div class="help">مقبوضات ومدفوعات للمطعم والكافيه والقاعات.</div>
+            <div style="margin-top:10px">
+              <button class="btn" data-nav="cash">الدخول</button>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="box-shadow:none">
+          <div class="bd">
+            <div style="font-weight:900;font-size:16px;margin-bottom:10px">المخزون والمشتريات</div>
+            <div class="help">رصيد الأصناف + منصرف يومي + جرد فعلي.</div>
+            <div style="margin-top:10px">
+              <button class="btn" data-nav="stock">الدخول</button>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="box-shadow:none">
+          <div class="bd">
+            <div style="font-weight:900;font-size:16px;margin-bottom:10px">شؤون العاملين</div>
+            <div class="help">حضور وانصراف + رواتب + سلف/مكافآت/جزاءات.</div>
+            <div style="margin-top:10px">
+              <button class="btn" data-nav="hr">الدخول</button>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="box-shadow:none">
+          <div class="bd">
+            <div style="font-weight:900;font-size:16px;margin-bottom:10px">إدارة المستخدمين</div>
+            <div class="help">جاهزة لتفعيل الصلاحيات لاحقاً من الداخل.</div>
+            <div style="margin-top:10px">
+              <button class="btn secondary" data-nav="users">الدخول</button>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="box-shadow:none">
+          <div class="bd">
+            <div style="font-weight:900;font-size:16px;margin-bottom:10px">نسخ احتياطي</div>
+            <div class="help">تصدير/استيراد JSON (مُوصى به يومياً).</div>
+            <div style="margin-top:10px">
+              <button class="btn secondary" data-nav="backup">الدخول</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  home.appendChild(extra);
+})();
+
+// ======= إصلاح شائع: منع “دبل سكربت” لو تم اللصق مرتين =======
+(function preventDoubleInit(){
+  if(window.__restocafeInitialized) return;
+  window.__restocafeInitialized = true;
+})();
+
+// ======= ملاحظة: مرحلة 2 (لاحقاً) =======
+// - ورقة تكاليف/أوردرات للمطعم والكافيه والقاعات لقياس ربح/خسارة لكل فرح
+// - خدمات ثابتة (كوشة، DJ، فيديو… إلخ) + خصم من المدير
+// - قاعدة بيانات على الإنترنت + نسخ احتياطي تلقائي + تعدد مستخدمين
+
+</script>
+
+</body>
+</html>
