@@ -1311,6 +1311,11 @@ function toast(title, sub=""){
 }
 
 // ======= تنقل =======
+  function activateByHash(){
+  const h = (location.hash || "#home").replace("#","");
+  go(h);
+}
+window.addEventListener("hashchange", activateByHash);
 function go(where){
   const map = {home:"sec-home", bookings:"sec-bookings", cash:"sec-cash", stock:"sec-stock", hr:"sec-hr", users:"sec-users", backup:"sec-backup"};
   document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
