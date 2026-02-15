@@ -2459,7 +2459,8 @@ function resetAllData(){
 }
 
 // ======= تشغيل =======
-window.addEventListener("load", init);
+  window.addEventListener("load", ()=>{ init(); activateByHash(); });
+  
 // ======= أدوات مساعدة إضافية =======
 
 // تحسين: دعم Array.prototype.at لو المتصفح قديم
