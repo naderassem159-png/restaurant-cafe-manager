@@ -1,0 +1,1874 @@
+-- =====================================================
+-- نظام إدارة المطاعم والكافيهات وقاعات الأفراح
+-- Restaurant & Cafe Management System
+-- =====================================================
+
+-- إنشاء قاعدة البيانات
+CREATE DATABASE restaurant_management;
+USE restaurant_management;
+
+-- =====================================================
+-- 1. نظام المستخدمين والصلاحيات
+-- =====================================================
+
+CREATE TABLE roles (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(50) UNIQUE NOT NULL, -- SUPER_ADMIN, MANAGER, ACCOUNTANT, etc.
+    permissions JSON NOT NULL, -- ['*'] أو قائمة محددة
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE users (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    full_name VARCHAR(100) NOT NULL,
+    email VARCHAR(100),
+    phone VARCHAR(20),
+    role_id INT,
+    branch_id INT,
+    is_active BOOLEAN DEFAULT TRUE,
+    last_login TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (role_id) REFERENCES roles(id)
+);
+
+-- بيانات افتراضية للأدوار
+INSERT INTO roles (name, permissions) VALUES
+('SUPER_ADMIN', '["*"]'),
+('MANAGER', '["view_reports", "manage_inventory", "manage_staff", "view_halls", "manage_daily", "approve_purchases"]'),
+('ACCOUNTANT', '["view_financial", "manage_salaries", "process_payments", "view_daily", "manage_hall_payments"]'),
+('INVENTORY_MANAGER', '["manage_stock", "manage_purchases", "view_suppliers", "add_products"]'),
+('HR_MANAGER', '["manage_attendance", "manage_salaries", "manage_deductions", "manage_rewards"]'),
+('HALL_SUPERVISOR', '["manage_bookings", "manage_packages", "process_payments", "view_hall_calendar"]'),
+('CASHIER', '["process_daily_sales", "view_daily_report", "add_expenses", "process_hall_payments"]');
+
+-- مستخدم افتراضي (admin/admin123)
+INSERT INTO users (username, password_hash, full_name, role_id) VALUES
+('admin', '$2b$10$YourHashedPasswordHere', 'System Administrator', 1);
+
+-- =====================================================
+-- 2. المخزن والمشتريات
+-- =====================================================
+
+CREATE TABLE categories (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name_ar VARCHAR(255) NOT NULL,
+    name_en VARCHAR(255),
+    type ENUM('raw_material', 'finished_product', 'packaging', 'beverage') DEFAULT 'raw_material',
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+CREATE TABLE suppliers (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(255) NOT NULL,
+    phone VARCHAR(20),
+    email VARCHAR(100),
+    address TEXT,
+    balance DECIMAL(12,2) DEFAULT 0,
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+CREATE TABLE products (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name_ar VARCHAR(255) NOT NULL,
+    name_en VARCHAR(255),
+    category_id INT,
+    barcode VARCHAR(100),
+    unit VARCHAR(50), -- kg, liter, piece, box
+    min_stock DECIMAL(10,2) DEFAULT 0,
+    current_stock DECIMAL(10,2) DEFAULT 0,
+    cost_price DECIMAL(10,2) DEFAULT 0,
+    selling_price DECIMAL(10,2) DEFAULT 0,
+    supplier_id INT,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (category_id) REFERENCES categories(id),
+    FOREIGN KEY (supplier_id) REFERENCES suppliers(id)
+);
+
+CREATE TABLE purchase_orders (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    supplier_id INT,
+    order_date DATE NOT NULL,
+    total_amount DECIMAL(12,2) DEFAULT 0,
+    status ENUM('pending', 'approved', 'received', 'cancelled') DEFAULT 'pending',
+    payment_status ENUM('unpaid', 'partial', 'paid') DEFAULT 'unpaid',
+    paid_amount DECIMAL(12,2) DEFAULT 0,
+    notes TEXT,
+    created_by INT,
+    approved_by INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (supplier_id) REFERENCES suppliers(id)
+);
+
+CREATE TABLE purchase_order_items (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    order_id INT,
+    product_id INT,
+    quantity DECIMAL(10,2) NOT NULL,
+    unit_price DECIMAL(10,2) NOT NULL,
+    total_price DECIMAL(12,2) GENERATED ALWAYS AS (quantity * unit_price) STORED,
+    received_quantity DECIMAL(10,2) DEFAULT 0,
+    FOREIGN KEY (order_id) REFERENCES purchase_orders(id),
+    FOREIGN KEY (product_id) REFERENCES products(id)
+);
+
+CREATE TABLE inventory_transactions (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    product_id INT,
+    type ENUM('purchase', 'sale', 'waste', 'return', 'adjustment', 'transfer') NOT NULL,
+    quantity DECIMAL(10,2) NOT NULL, -- positive for in, negative for out
+    unit_cost DECIMAL(10,2),
+    reference_type VARCHAR(50),
+    reference_id INT,
+    notes TEXT,
+    created_by INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (product_id) REFERENCES products(id)
+);
+
+-- =====================================================
+-- 3. الموارد البشرية (الحضور والرواتب)
+-- =====================================================
+
+CREATE TABLE employees (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    full_name VARCHAR(255) NOT NULL,
+    phone VARCHAR(20),
+    email VARCHAR(100),
+    national_id VARCHAR(20),
+    job_title VARCHAR(100),
+    department ENUM('kitchen', 'service', 'management', 'halls', 'accounting', 'security') DEFAULT 'service',
+    hire_date DATE,
+    basic_salary DECIMAL(12,2) DEFAULT 0,
+    work_schedule JSON, -- {"start": "09:00", "end": "17:00", "days": [1,2,3,4,5]}
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE attendance (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    employee_id INT,
+    date DATE NOT NULL,
+    check_in TIME,
+    check_out TIME,
+    status ENUM('present', 'absent', 'late', 'early_leave', 'vacation', 'sick_leave') DEFAULT 'present',
+    late_minutes INT DEFAULT 0,
+    early_leave_minutes INT DEFAULT 0,
+    overtime_minutes INT DEFAULT 0,
+    location_lat DECIMAL(10,8),
+    location_lng DECIMAL(11,8),
+    device_info VARCHAR(255),
+    notes TEXT,
+    FOREIGN KEY (employee_id) REFERENCES employees(id)
+);
+
+CREATE TABLE payroll (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    employee_id INT,
+    month INT NOT NULL,
+    year INT NOT NULL,
+    working_days INT DEFAULT 0,
+    absent_days INT DEFAULT 0,
+    late_hours DECIMAL(5,2) DEFAULT 0,
+    overtime_hours DECIMAL(5,2) DEFAULT 0,
+    
+    -- Earnings
+    basic_salary DECIMAL(12,2) DEFAULT 0,
+    overtime_pay DECIMAL(12,2) DEFAULT 0,
+    bonuses DECIMAL(12,2) DEFAULT 0,
+    rewards DECIMAL(12,2) DEFAULT 0,
+    total_earnings DECIMAL(12,2) DEFAULT 0,
+    
+    -- Deductions
+    absence_deduction DECIMAL(12,2) DEFAULT 0,
+    late_deduction DECIMAL(12,2) DEFAULT 0,
+    other_deductions DECIMAL(12,2) DEFAULT 0,
+    advances DECIMAL(12,2) DEFAULT 0,
+    total_deductions DECIMAL(12,2) DEFAULT 0,
+    
+    -- Net
+    gross_salary DECIMAL(12,2) DEFAULT 0,
+    net_salary DECIMAL(12,2) DEFAULT 0,
+    
+    payment_status ENUM('pending', 'paid') DEFAULT 'pending',
+    payment_date DATE,
+    FOREIGN KEY (employee_id) REFERENCES employees(id),
+    UNIQUE KEY unique_payroll (employee_id, month, year)
+);
+
+CREATE TABLE payroll_adjustments (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    payroll_id INT,
+    employee_id INT,
+    type ENUM('deduction', 'bonus', 'reward', 'advance', 'penalty') NOT NULL,
+    amount DECIMAL(12,2) NOT NULL,
+    reason TEXT,
+    date DATE NOT NULL,
+    approved_by INT,
+    FOREIGN KEY (payroll_id) REFERENCES payroll(id),
+    FOREIGN KEY (employee_id) REFERENCES employees(id)
+);
+
+-- =====================================================
+-- 4. قاعات الأفراح (4 قاعات)
+-- =====================================================
+
+CREATE TABLE halls (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name_ar VARCHAR(255) NOT NULL,
+    name_en VARCHAR(255),
+    capacity INT NOT NULL,
+    base_price DECIMAL(12,2) DEFAULT 0,
+    morning_price DECIMAL(12,2) DEFAULT 0,
+    evening_price DECIMAL(12,2) DEFAULT 0,
+    full_day_price DECIMAL(12,2) DEFAULT 0,
+    description TEXT,
+    images JSON,
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+CREATE TABLE wedding_packages (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    hall_id INT,
+    name_ar VARCHAR(255) NOT NULL,
+    price DECIMAL(12,2) DEFAULT 0,
+    includes JSON, -- ['catering', 'decoration', 'photography', 'dj']
+    max_guests INT,
+    duration_hours INT DEFAULT 5,
+    FOREIGN KEY (hall_id) REFERENCES halls(id)
+);
+
+CREATE TABLE hall_bookings (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    hall_id INT,
+    package_id INT,
+    customer_name VARCHAR(255) NOT NULL,
+    customer_phone VARCHAR(20),
+    customer_email VARCHAR(100),
+    event_date DATE NOT NULL,
+    session_type ENUM('morning', 'evening', 'full_day') DEFAULT 'evening',
+    number_of_guests INT,
+    
+    -- Financial
+    package_price DECIMAL(12,2) DEFAULT 0,
+    additions_total DECIMAL(12,2) DEFAULT 0,
+    total_amount DECIMAL(12,2) DEFAULT 0,
+    
+    -- Payments
+    deposit_amount DECIMAL(12,2) DEFAULT 0,
+    deposit_paid BOOLEAN DEFAULT FALSE,
+    deposit_date DATE,
+    paid_amount DECIMAL(12,2) DEFAULT 0,
+    remaining_amount DECIMAL(12,2) GENERATED ALWAYS AS (total_amount - paid_amount) STORED,
+    
+    status ENUM('pending', 'confirmed', 'in_progress', 'completed', 'cancelled') DEFAULT 'pending',
+    created_by INT,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (hall_id) REFERENCES halls(id),
+    FOREIGN KEY (package_id) REFERENCES wedding_packages(id)
+);
+
+CREATE TABLE booking_payments (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    booking_id INT,
+    installment_number INT DEFAULT 1,
+    amount DECIMAL(12,2) NOT NULL,
+    due_date DATE,
+    paid_date DATE,
+    status ENUM('pending', 'paid', 'overdue', 'waived') DEFAULT 'pending',
+    payment_method ENUM('cash', 'bank_transfer', 'card', 'check') DEFAULT 'cash',
+    receipt_number VARCHAR(100),
+    notes TEXT,
+    FOREIGN KEY (booking_id) REFERENCES hall_bookings(id)
+);
+
+CREATE TABLE booking_additions (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    booking_id INT,
+    name VARCHAR(255) NOT NULL,
+    type ENUM('service', 'item', 'upgrade', 'extra_guests', 'extra_hours') DEFAULT 'service',
+    quantity INT DEFAULT 1,
+    unit_price DECIMAL(10,2) NOT NULL,
+    total_price DECIMAL(12,2) GENERATED ALWAYS AS (quantity * unit_price) STORED,
+    is_paid BOOLEAN DEFAULT FALSE,
+    FOREIGN KEY (booking_id) REFERENCES hall_bookings(id)
+);
+
+CREATE TABLE hall_calendar (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    hall_id INT,
+    date DATE NOT NULL,
+    booking_id INT,
+    morning_status ENUM('available', 'booked', 'maintenance', 'blocked') DEFAULT 'available',
+    evening_status ENUM('available', 'booked', 'maintenance', 'blocked') DEFAULT 'available',
+    notes TEXT,
+    FOREIGN KEY (hall_id) REFERENCES halls(id),
+    FOREIGN KEY (booking_id) REFERENCES hall_bookings(id),
+    UNIQUE KEY unique_calendar (hall_id, date)
+);
+
+-- =====================================================
+-- 5. اليومية والمالية
+-- =====================================================
+
+CREATE TABLE daily_transactions (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    date DATE UNIQUE NOT NULL,
+    branch_id INT DEFAULT 1,
+    
+    -- Revenue Sources
+    restaurant_revenue DECIMAL(12,2) DEFAULT 0,
+    cafe_revenue DECIMAL(12,2) DEFAULT 0,
+    hall_1_revenue DECIMAL(12,2) DEFAULT 0,
+    hall_2_revenue DECIMAL(12,2) DEFAULT 0,
+    hall_3_revenue DECIMAL(12,2) DEFAULT 0,
+    hall_4_revenue DECIMAL(12,2) DEFAULT 0,
+    other_revenue DECIMAL(12,2) DEFAULT 0,
+    total_revenue DECIMAL(12,2) DEFAULT 0,
+    
+    -- Expenses
+    purchases_expense DECIMAL(12,2) DEFAULT 0,
+    salaries_expense DECIMAL(12,2) DEFAULT 0,
+    utilities_expense DECIMAL(12,2) DEFAULT 0,
+    maintenance_expense DECIMAL(12,2) DEFAULT 0,
+    rent_expense DECIMAL(12,2) DEFAULT 0,
+    marketing_expense DECIMAL(12,2) DEFAULT 0,
+    other_expenses DECIMAL(12,2) DEFAULT 0,
+    total_expenses DECIMAL(12,2) DEFAULT 0,
+    
+    -- Summary
+    net_amount DECIMAL(12,2) DEFAULT 0,
+    
+    -- Cash Management
+    opening_cash DECIMAL(12,2) DEFAULT 0,
+    closing_cash DECIMAL(12,2) DEFAULT 0,
+    expected_cash DECIMAL(12,2) DEFAULT 0,
+    cash_difference DECIMAL(12,2) DEFAULT 0,
+    
+    status ENUM('open', 'closed', 'approved') DEFAULT 'open',
+    closed_by INT,
+    closed_at TIMESTAMP,
+    notes TEXT,
+    created_by INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE daily_revenue_details (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    daily_id INT,
+    source ENUM('restaurant', 'cafe', 'hall_1', 'hall_2', 'hall_3', 'hall_4', 'other') NOT NULL,
+    invoice_number VARCHAR(100),
+    amount DECIMAL(10,2) NOT NULL,
+    payment_method ENUM('cash', 'card', 'transfer', 'debt') DEFAULT 'cash',
+    time TIME,
+    description TEXT,
+    FOREIGN KEY (daily_id) REFERENCES daily_transactions(id)
+);
+
+CREATE TABLE daily_expense_details (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    daily_id INT,
+    category VARCHAR(100) NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    description TEXT,
+    receipt_image VARCHAR(255),
+    approved_by INT,
+    FOREIGN KEY (daily_id) REFERENCES daily_transactions(id)
+);
+
+-- =====================================================
+-- 6. المبيعات (المطعم والكافيه)
+-- =====================================================
+
+CREATE TABLE menu_categories (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name_ar VARCHAR(255) NOT NULL,
+    name_en VARCHAR(255),
+    type ENUM('food', 'beverage', 'dessert', 'hookah') DEFAULT 'food',
+    kitchen_or_bar ENUM('kitchen', 'bar') DEFAULT 'kitchen',
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+CREATE TABLE menu_items (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    category_id INT,
+    name_ar VARCHAR(255) NOT NULL,
+    name_en VARCHAR(255),
+    description TEXT,
+    price DECIMAL(10,2) NOT NULL,
+    cost_price DECIMAL(10,2) DEFAULT 0,
+    image VARCHAR(255),
+    is_available BOOLEAN DEFAULT TRUE,
+    preparation_time INT, -- minutes
+    FOREIGN KEY (category_id) REFERENCES menu_categories(id)
+);
+
+CREATE TABLE sales_invoices (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    invoice_number VARCHAR(50) UNIQUE,
+    type ENUM('restaurant', 'cafe', 'takeaway', 'delivery') DEFAULT 'restaurant',
+    table_number VARCHAR(20),
+    customer_name VARCHAR(100),
+    customer_phone VARCHAR(20),
+    subtotal DECIMAL(12,2) DEFAULT 0,
+    tax_amount DECIMAL(12,2) DEFAULT 0,
+    discount_amount DECIMAL(12,2) DEFAULT 0,
+    total_amount DECIMAL(12,2) DEFAULT 0,
+    paid_amount DECIMAL(12,2) DEFAULT 0,
+    payment_status ENUM('unpaid', 'partial', 'paid') DEFAULT 'unpaid',
+    payment_method ENUM('cash', 'card', 'transfer') DEFAULT 'cash',
+    status ENUM('open', 'closed', 'cancelled') DEFAULT 'open',
+    created_by INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE sales_invoice_items (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    invoice_id INT,
+    menu_item_id INT,
+    quantity INT NOT NULL,
+    unit_price DECIMAL(10,2) NOT NULL,
+    total_price DECIMAL(12,2) GENERATED ALWAYS AS (quantity * unit_price) STORED,
+    notes TEXT,
+    status ENUM('pending', 'preparing', 'ready', 'served') DEFAULT 'pending',
+    FOREIGN KEY (invoice_id) REFERENCES sales_invoices(id),
+    FOREIGN KEY (menu_item_id) REFERENCES menu_items(id)
+);
+
+-- =====================================================
+-- 7. الإشعارات والسجلات
+-- =====================================================
+
+CREATE TABLE notifications (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT,
+    type ENUM('low_stock', 'payment_due', 'booking_reminder', 'attendance_alert', 'system') NOT NULL,
+    title VARCHAR(255),
+    message TEXT,
+    is_read BOOLEAN DEFAULT FALSE,
+    data JSON,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE activity_logs (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT,
+    action VARCHAR(100) NOT NULL,
+    table_name VARCHAR(50),
+    record_id INT,
+    old_values JSON,
+    new_values JSON,
+    ip_address VARCHAR(50),
+    user_agent TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =====================================================
+-- 8. الإجراءات المخزنة (Stored Procedures)
+-- =====================================================
+
+DELIMITER //
+
+-- إجراء لحساب الرواتب تلقائياً
+CREATE PROCEDURE CalculatePayroll(IN p_month INT, IN p_year INT)
+BEGIN
+    DECLARE done INT DEFAULT FALSE;
+    DECLARE emp_id INT;
+    DECLARE basic_sal DECIMAL(12,2);
+    DECLARE work_days INT DEFAULT 30;
+    
+    DECLARE emp_cursor CURSOR FOR 
+        SELECT id, basic_salary FROM employees WHERE is_active = TRUE;
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
+    
+    OPEN emp_cursor;
+    emp_loop: LOOP
+        FETCH emp_cursor INTO emp_id, basic_sal;
+        IF done THEN
+            LEAVE emp_loop;
+        END IF;
+        
+        -- حساب أيام الغياب والتأخير
+        SET @absent_days = (SELECT COUNT(*) FROM attendance 
+                           WHERE employee_id = emp_id AND MONTH(date) = p_month 
+                           AND YEAR(date) = p_year AND status = 'absent');
+        
+        SET @late_hours = (SELECT COALESCE(SUM(late_minutes),0)/60 FROM attendance 
+                          WHERE employee_id = emp_id AND MONTH(date) = p_month 
+                          AND YEAR(date) = p_year);
+        
+        SET @overtime_hours = (SELECT COALESCE(SUM(overtime_minutes),0)/60 FROM attendance 
+                              WHERE employee_id = emp_id AND MONTH(date) = p_month 
+                              AND YEAR(year) = p_year);
+        
+        -- حساب الاستقطاعات
+        SET @absence_deduction = (basic_sal / work_days) * @absent_days;
+        SET @late_deduction = (basic_sal / work_days / 8) * @late_hours;
+        SET @overtime_pay = @overtime_hours * (basic_sal / work_days / 8) * 1.5;
+        
+        -- الإجماليات
+        SET @total_earnings = basic_sal + @overtime_pay;
+        SET @total_deductions = @absence_deduction + @late_deduction;
+        SET @net_sal = @total_earnings - @total_deductions;
+        
+        -- إدخال أو تحديث الراتب
+        INSERT INTO payroll (employee_id, month, year, working_days, absent_days, 
+                          late_hours, overtime_hours, basic_salary, overtime_pay,
+                          absence_deduction, late_deduction, total_earnings,
+                          total_deductions, gross_salary, net_salary)
+        VALUES (emp_id, p_month, p_year, work_days - @absent_days, @absent_days,
+                @late_hours, @overtime_hours, basic_sal, @overtime_pay,
+                @absence_deduction, @late_deduction, @total_earnings,
+                @total_deductions, @total_earnings, @net_sal)
+        ON DUPLICATE KEY UPDATE
+            working_days = work_days - @absent_days,
+            absent_days = @absent_days,
+            late_hours = @late_hours,
+            overtime_hours = @overtime_hours,
+            overtime_pay = @overtime_pay,
+            absence_deduction = @absence_deduction,
+            late_deduction = @late_deduction,
+            total_earnings = @total_earnings,
+            total_deductions = @total_deductions,
+            gross_salary = @total_earnings,
+            net_salary = @net_sal;
+            
+    END LOOP;
+    CLOSE emp_cursor;
+END //
+
+-- إجراء لإغلاق اليومية وحساب الفروقات
+CREATE PROCEDURE CloseDailyTransaction(IN p_date DATE, IN p_user_id INT)
+BEGIN
+    DECLARE v_total_revenue DECIMAL(12,2);
+    DECLARE v_total_expenses DECIMAL(12,2);
+    DECLARE v_opening_cash DECIMAL(12,2);
+    DECLARE v_closing_cash DECIMAL(12,2);
+    DECLARE v_expected DECIMAL(12,2);
+    
+    -- جمع الإيرادات
+    SET v_total_revenue = (SELECT COALESCE(SUM(amount),0) FROM daily_revenue_details 
+                          WHERE daily_id = (SELECT id FROM daily_transactions WHERE date = p_date));
+    
+    -- جمع المصروفات
+    SET v_total_expenses = (SELECT COALESCE(SUM(amount),0) FROM daily_expense_details 
+                           WHERE daily_id = (SELECT id FROM daily_transactions WHERE date = p_date));
+    
+    -- جلب الرصيد الافتتاحي والختامي
+    SELECT opening_cash, closing_cash INTO v_opening_cash, v_closing_cash
+    FROM daily_transactions WHERE date = p_date;
+    
+    -- حساب الرصيد المتوقع
+    SET v_expected = v_opening_cash + v_total_revenue - v_total_expenses;
+    
+    -- تحديث اليومية
+    UPDATE daily_transactions SET
+        total_revenue = v_total_revenue,
+        total_expenses = v_total_expenses,
+        net_amount = v_total_revenue - v_total_expenses,
+        expected_cash = v_expected,
+        cash_difference = v_closing_cash - v_expected,
+        status = 'closed',
+        closed_by = p_user_id,
+        closed_at = NOW()
+    WHERE date = p_date;
+    
+    SELECT v_expected AS expected_cash, (v_closing_cash - v_expected) AS difference;
+END //
+
+DELIMITER ;
+
+-- =====================================================
+-- 9. بيانات افتراضية للاختبار
+-- =====================================================
+
+-- إضافة القاعات الأربع
+INSERT INTO halls (name_ar, name_en, capacity, base_price, morning_price, evening_price, full_day_price) VALUES
+('قاعة النخيل', 'Palm Hall', 300, 15000, 8000, 15000, 22000),
+('قاعة اللؤلؤة', 'Pearl Hall', 200, 12000, 6000, 12000, 18000),
+('قاعة الزمرد', 'Emerald Hall', 150, 10000, 5000, 10000, 15000),
+('قاعة الياقوت', 'Ruby Hall', 100, 8000, 4000, 8000, 12000);
+
+-- إضافة موظفين افتراضيين
+INSERT INTO employees (full_name, phone, job_title, department, hire_date, basic_salary) VALUES
+('أحمد محمد', '0500000001', 'مدير مطعم', 'management', '2023-01-15', 8000),
+('خالد عبدالله', '0500000002', 'شيف رئيسي', 'kitchen', '2023-02-01', 6000),
+('سara علي', '0500000003', 'كاشير', 'service', '2023-03-10', 4000),
+('محمد إبراهيم', '0500000004', 'مشرف قاعات', 'halls', '2023-01-20', 5500);
+
+-- إضافة فئات المخزن
+INSERT INTO categories (name_ar, type) VALUES
+('مواد خام - لحوم', 'raw_material'),
+('مواد خام - خضروات', 'raw_material'),
+('مشروبات', 'beverage'),
+('تغليف', 'packaging'),
+('منتجات جاهزة', 'finished_product');
+
+-- إضافة مورد
+INSERT INTO suppliers (name, phone, address) VALUES
+('شركة الغذاء الجيد', '0555555555', 'الرياض، حي الصناعية');
+
+-- إضافة منتجات
+INSERT INTO products (name_ar, category_id, barcode, unit, min_stock, current_stock, cost_price, supplier_id) VALUES
+('زيت نباتي 5لتر', 1, '123456789', 'علبة', 10, 50, 25.00, 1),
+('أرز بسمتي', 1, '987654321', 'كجم', 20, 100, 12.00, 1),
+('كولا 330مل', 3, '111222333', 'علبة', 50, 200, 2.50, 1);
+
+-- إنشاء يومية لليوم
+INSERT INTO daily_transactions (date, opening_cash, created_by) VALUES
+(CURDATE(), 1000, 1);
+// =====================================================
+// Backend API - Node.js + Express + MySQL
+// نظام إدارة المطاعم والكافيهات
+// =====================================================
+
+const express = require('express');
+const mysql = require('mysql2/promise');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const cors = require('cors');
+const multer = require('multer');
+const path = require('path');
+require('dotenv').config();
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use('/uploads', express.static('uploads'));
+
+// Database Connection
+const dbConfig = {
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || '',
+    database: process.env.DB_NAME || 'restaurant_management',
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
+};
+
+const pool = mysql.createPool(dbConfig);
+
+// JWT Secret
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+
+// Multer Config for file uploads
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, 'uploads/'),
+    filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname))
+});
+const upload = multer({ storage });
+
+// =====================================================
+// Middleware: Authentication & Authorization
+// =====================================================
+
+const authenticate = async (req, res, next) => {
+    try {
+        const token = req.headers.authorization?.split(' ')[1];
+        if (!token) return res.status(401).json({ error: 'No token provided' });
+        
+        const decoded = jwt.verify(token, JWT_SECRET);
+        const [users] = await pool.execute('SELECT u.*, r.permissions FROM users u JOIN roles r ON u.role_id = r.id WHERE u.id = ?', [decoded.id]);
+        
+        if (!users.length) return res.status(401).json({ error: 'User not found' });
+        
+        req.user = users[0];
+        req.user.permissions = JSON.parse(users[0].permissions);
+        next();
+    } catch (error) {
+        res.status(401).json({ error: 'Invalid token' });
+    }
+};
+
+const authorize = (permissions) => {
+    return (req, res, next) => {
+        const userPerms = req.user.permissions;
+        if (userPerms.includes('*')) return next();
+        
+        const hasPermission = permissions.some(p => userPerms.includes(p));
+        if (!hasPermission) return res.status(403).json({ error: 'Insufficient permissions' });
+        
+        next();
+    };
+};
+
+// Log Activity
+const logActivity = async (userId, action, tableName, recordId, oldValues, newValues, req) => {
+    try {
+        await pool.execute(
+            `INSERT INTO activity_logs (user_id, action, table_name, record_id, old_values, new_values, ip_address, user_agent) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [userId, action, tableName, recordId, JSON.stringify(oldValues), JSON.stringify(newValues), 
+             req.ip, req.headers['user-agent']]
+        );
+    } catch (e) { console.error('Activity log error:', e); }
+};
+
+// =====================================================
+// Routes: Authentication
+// =====================================================
+
+app.post('/api/auth/login', async (req, res) => {
+    try {
+        const { username, password, device_id, fcm_token } = req.body;
+        
+        const [users] = await pool.execute(
+            `SELECT u.*, r.name as role_name, r.permissions 
+             FROM users u JOIN roles r ON u.role_id = r.id 
+             WHERE u.username = ? AND u.is_active = TRUE`, 
+            [username]
+        );
+        
+        if (!users.length) return res.status(401).json({ error: 'Invalid credentials' });
+        
+        const user = users[0];
+        const validPassword = await bcrypt.compare(password, user.password_hash);
+        
+        if (!validPassword) return res.status(401).json({ error: 'Invalid credentials' });
+        
+        // Update last login
+        await pool.execute('UPDATE users SET last_login = NOW() WHERE id = ?', [user.id]);
+        
+        const token = jwt.sign(
+            { id: user.id, username: user.username, role: user.role_name },
+            JWT_SECRET,
+            { expiresIn: '24h' }
+        );
+        
+        res.json({
+            token,
+            user: {
+                id: user.id,
+                name: user.full_name,
+                username: user.username,
+                role: user.role_name,
+                permissions: JSON.parse(user.permissions)
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/auth/register', authenticate, authorize(['manage_staff']), async (req, res) => {
+    try {
+        const { username, password, full_name, email, phone, role_id } = req.body;
+        const hashedPassword = await bcrypt.hash(password, 10);
+        
+        const [result] = await pool.execute(
+            'INSERT INTO users (username, password_hash, full_name, email, phone, role_id) VALUES (?, ?, ?, ?, ?, ?)',
+            [username, hashedPassword, full_name, email, phone, role_id]
+        );
+        
+        logActivity(req.user.id, 'CREATE', 'users', result.insertId, null, req.body, req);
+        
+        res.status(201).json({ id: result.insertId, message: 'User created successfully' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// =====================================================
+// Routes: Inventory & Purchases
+// =====================================================
+
+// Products
+app.get('/api/products', authenticate, authorize(['manage_stock', 'view_inventory']), async (req, res) => {
+    try {
+        const [products] = await pool.execute(`
+            SELECT p.*, c.name_ar as category_name, s.name as supplier_name 
+            FROM products p 
+            LEFT JOIN categories c ON p.category_id = c.id 
+            LEFT JOIN suppliers s ON p.supplier_id = s.id
+            WHERE p.is_active = TRUE
+        `);
+        res.json(products);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/products', authenticate, authorize(['add_products']), async (req, res) => {
+    try {
+        const { name_ar, name_en, category_id, barcode, unit, min_stock, cost_price, selling_price, supplier_id } = req.body;
+        const [result] = await pool.execute(
+            'INSERT INTO products (name_ar, name_en, category_id, barcode, unit, min_stock, cost_price, selling_price, supplier_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [name_ar, name_en, category_id, barcode, unit, min_stock, cost_price, selling_price, supplier_id]
+        );
+        res.status(201).json({ id: result.insertId });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Low Stock Alert
+app.get('/api/inventory/low-stock', authenticate, authorize(['manage_stock']), async (req, res) => {
+    try {
+        const [products] = await pool.execute(
+            'SELECT * FROM products WHERE current_stock <= min_stock AND is_active = TRUE'
+        );
+        res.json(products);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Purchase Orders
+app.post('/api/purchase-orders', authenticate, authorize(['manage_purchases']), async (req, res) => {
+    const conn = await pool.getConnection();
+    try {
+        await conn.beginTransaction();
+        
+        const { supplier_id, items, notes } = req.body;
+        let totalAmount = items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+        
+        const [orderResult] = await conn.execute(
+            'INSERT INTO purchase_orders (supplier_id, total_amount, notes, created_by) VALUES (?, ?, ?, ?)',
+            [supplier_id, totalAmount, notes, req.user.id]
+        );
+        
+        const orderId = orderResult.insertId;
+        
+        for (const item of items) {
+            await conn.execute(
+                'INSERT INTO purchase_order_items (order_id, product_id, quantity, unit_price) VALUES (?, ?, ?, ?)',
+                [orderId, item.product_id, item.quantity, item.unit_price]
+            );
+        }
+        
+        await conn.commit();
+        res.status(201).json({ id: orderId, total_amount: totalAmount });
+    } catch (error) {
+        await conn.rollback();
+        res.status(500).json({ error: error.message });
+    } finally {
+        conn.release();
+    }
+});
+
+app.post('/api/purchase-orders/:id/receive', authenticate, authorize(['manage_purchases']), async (req, res) => {
+    const conn = await pool.getConnection();
+    try {
+        await conn.beginTransaction();
+        
+        const { items } = req.body; // [{product_id, received_quantity}]
+        const orderId = req.params.id;
+        
+        for (const item of items) {
+            // Update received quantity
+            await conn.execute(
+                'UPDATE purchase_order_items SET received_quantity = ? WHERE order_id = ? AND product_id = ?',
+                [item.received_quantity, orderId, item.product_id]
+            );
+            
+            // Update stock
+            await conn.execute(
+                'UPDATE products SET current_stock = current_stock + ? WHERE id = ?',
+                [item.received_quantity, item.product_id]
+            );
+            
+            // Add inventory transaction
+            await conn.execute(
+                'INSERT INTO inventory_transactions (product_id, type, quantity, reference_type, reference_id, created_by) VALUES (?, ?, ?, ?, ?, ?)',
+                [item.product_id, 'purchase', item.received_quantity, 'purchase_order', orderId, req.user.id]
+            );
+        }
+        
+        // Update order status
+        await conn.execute(
+            "UPDATE purchase_orders SET status = 'received' WHERE id = ?",
+            [orderId]
+        );
+        
+        await conn.commit();
+        res.json({ message: 'Order received successfully' });
+    } catch (error) {
+        await conn.rollback();
+        res.status(500).json({ error: error.message });
+    } finally {
+        conn.release();
+    }
+});
+
+// =====================================================
+// Routes: HR & Attendance
+// =====================================================
+
+// Employees
+app.get('/api/employees', authenticate, authorize(['manage_staff']), async (req, res) => {
+    try {
+        const [employees] = await pool.execute('SELECT * FROM employees WHERE is_active = TRUE');
+        res.json(employees);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/employees', authenticate, authorize(['manage_staff']), async (req, res) => {
+    try {
+        const { full_name, phone, email, national_id, job_title, department, hire_date, basic_salary } = req.body;
+        const [result] = await pool.execute(
+            'INSERT INTO employees (full_name, phone, email, national_id, job_title, department, hire_date, basic_salary) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            [full_name, phone, email, national_id, job_title, department, hire_date, basic_salary]
+        );
+        res.status(201).json({ id: result.insertId });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Attendance
+app.post('/api/attendance/check-in', authenticate, authorize(['manage_attendance']), async (req, res) => {
+    try {
+        const { employee_id, location_lat, location_lng, device_info } = req.body;
+        
+        const [result] = await pool.execute(
+            'INSERT INTO attendance (employee_id, date, check_in, status, location_lat, location_lng, device_info) VALUES (?, CURDATE(), CURTIME(), "present", ?, ?, ?)',
+            [employee_id, location_lat, location_lng, device_info]
+        );
+        
+        res.status(201).json({ id: result.insertId, check_in: new Date() });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/attendance/check-out', authenticate, authorize(['manage_attendance']), async (req, res) => {
+    try {
+        const { employee_id, location_lat, location_lng } = req.body;
+        
+        // Get today's attendance
+        const [attendance] = await pool.execute(
+            'SELECT * FROM attendance WHERE employee_id = ? AND date = CURDATE()',
+            [employee_id]
+        );
+        
+        if (!attendance.length) {
+            return res.status(404).json({ error: 'No check-in found for today' });
+        }
+        
+        // Calculate late/early/overtime
+        const checkIn = attendance[0].check_in;
+        const checkOut = new Date();
+        const checkInTime = new Date(`2000-01-01T${checkIn}`);
+        const scheduledStart = new Date('2000-01-01T09:00:00');
+        const scheduledEnd = new Date('2000-01-01T17:00:00');
+        
+        let lateMinutes = 0;
+        let earlyLeaveMinutes = 0;
+        let overtimeMinutes = 0;
+        
+        if (checkInTime > scheduledStart) {
+            lateMinutes = Math.floor((checkInTime - scheduledStart) / 60000);
+        }
+        
+        if (checkOut < scheduledEnd) {
+            earlyLeaveMinutes = Math.floor((scheduledEnd - checkOut) / 60000);
+        } else if (checkOut > scheduledEnd) {
+            overtimeMinutes = Math.floor((checkOut - scheduledEnd) / 60000);
+        }
+        
+        await pool.execute(
+            `UPDATE attendance 
+             SET check_out = CURTIME(), location_check_out_lat = ?, location_check_out_lng = ?, 
+                 late_minutes = ?, early_leave_minutes = ?, overtime_minutes = ?
+             WHERE id = ?`,
+            [location_lat, location_lng, lateMinutes, earlyLeaveMinutes, overtimeMinutes, attendance[0].id]
+        );
+        
+        res.json({ message: 'Check-out recorded' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Payroll
+app.post('/api/payroll/calculate', authenticate, authorize(['manage_salaries']), async (req, res) => {
+    try {
+        const { month, year } = req.body;
+        await pool.execute('CALL CalculatePayroll(?, ?)', [month, year]);
+        res.json({ message: 'Payroll calculated successfully' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/payroll', authenticate, authorize(['manage_salaries']), async (req, res) => {
+    try {
+        const { month, year } = req.query;
+        const [payroll] = await pool.execute(`
+            SELECT p.*, e.full_name as employee_name 
+            FROM payroll p 
+            JOIN employees e ON p.employee_id = e.id 
+            WHERE p.month = ? AND p.year = ?
+        `, [month, year]);
+        res.json(payroll);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/payroll/adjustment', authenticate, authorize(['manage_salaries']), async (req, res) => {
+    try {
+        const { payroll_id, employee_id, type, amount, reason } = req.body;
+        const [result] = await pool.execute(
+            'INSERT INTO payroll_adjustments (payroll_id, employee_id, type, amount, reason, date, approved_by) VALUES (?, ?, ?, ?, ?, CURDATE(), ?)',
+            [payroll_id, employee_id, type, amount, reason, req.user.id]
+        );
+        
+        // Update payroll totals
+        if (type === 'bonus' || type === 'reward') {
+            await pool.execute(
+                'UPDATE payroll SET bonuses = bonuses + ?, total_earnings = total_earnings + ?, net_salary = net_salary + ? WHERE id = ?',
+                [amount, amount, amount, payroll_id]
+            );
+        } else if (type === 'deduction' || type === 'penalty') {
+            await pool.execute(
+                'UPDATE payroll SET other_deductions = other_deductions + ?, total_deductions = total_deductions + ?, net_salary = net_salary - ? WHERE id = ?',
+                [amount, amount, amount, payroll_id]
+            );
+        }
+        
+        res.status(201).json({ id: result.insertId });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// =====================================================
+// Routes: Wedding Halls
+// =====================================================
+
+// Halls
+app.get('/api/halls', authenticate, async (req, res) => {
+    try {
+        const [halls] = await pool.execute('SELECT * FROM halls WHERE is_active = TRUE');
+        res.json(halls);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Calendar
+app.get('/api/halls/calendar', authenticate, async (req, res) => {
+    try {
+        const { hall_id, month, year } = req.query;
+        const [calendar] = await pool.execute(`
+            SELECT c.*, b.customer_name, b.status as booking_status
+            FROM hall_calendar c
+            LEFT JOIN hall_bookings b ON c.booking_id = b.id
+            WHERE c.hall_id = ? AND MONTH(c.date) = ? AND YEAR(c.date) = ?
+        `, [hall_id, month, year]);
+        res.json(calendar);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Bookings
+app.post('/api/halls/bookings', authenticate, authorize(['manage_bookings']), async (req, res) => {
+    const conn = await pool.getConnection();
+    try {
+        await conn.beginTransaction();
+        
+        const {
+            hall_id, package_id, customer_name, customer_phone, event_date,
+            session_type, number_of_guests, additions
+        } = req.body;
+        
+        // Check availability
+        const [existing] = await conn.execute(
+            `SELECT * FROM hall_calendar 
+             WHERE hall_id = ? AND date = ? AND 
+             (morning_status = 'booked' OR evening_status = 'booked')`,
+            [hall_id, event_date]
+        );
+        
+        if (existing.length > 0) {
+            return res.status(400).json({ error: 'Hall not available for selected date' });
+        }
+        
+        // Get package price
+        const [packages] = await conn.execute('SELECT * FROM wedding_packages WHERE id = ?', [package_id]);
+        const packagePrice = packages[0]?.price || 0;
+        
+        // Calculate additions
+        let additionsTotal = 0;
+        if (additions) {
+            additionsTotal = additions.reduce((sum, add) => sum + (add.quantity * add.unit_price), 0);
+        }
+        
+        const totalAmount = packagePrice + additionsTotal;
+        const depositAmount = totalAmount * 0.3; // 30% deposit
+        
+        // Create booking
+        const [bookingResult] = await conn.execute(
+            `INSERT INTO hall_bookings 
+             (hall_id, package_id, customer_name, customer_phone, event_date, session_type,
+              number_of_guests, package_price, additions_total, total_amount, deposit_amount, created_by)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [hall_id, package_id, customer_name, customer_phone, event_date, session_type,
+             number_of_guests, packagePrice, additionsTotal, totalAmount, depositAmount, req.user.id]
+        );
+        
+        const bookingId = bookingResult.insertId;
+        
+        // Add additions
+        if (additions) {
+            for (const add of additions) {
+                await conn.execute(
+                    'INSERT INTO booking_additions (booking_id, name, type, quantity, unit_price) VALUES (?, ?, ?, ?, ?)',
+                    [bookingId, add.name, add.type, add.quantity, add.unit_price]
+                );
+            }
+        }
+        
+        // Create payment schedule (3 installments)
+        const installmentAmount = (totalAmount - depositAmount) / 2;
+        const eventDate = new Date(event_date);
+        const installment1Date = new Date(eventDate);
+        installment1Date.setDate(installment1Date.getDate() - 14);
+        const installment2Date = new Date(eventDate);
+        installment2Date.setDate(installment2Date.getDate() - 7);
+        
+        await conn.execute(
+            'INSERT INTO booking_payments (booking_id, installment_number, amount, due_date, status) VALUES (?, 1, ?, ?, "pending")',
+            [bookingId, depositAmount, new Date()]
+        );
+        await conn.execute(
+            'INSERT INTO booking_payments (booking_id, installment_number, amount, due_date, status) VALUES (?, 2, ?, ?, "pending")',
+            [bookingId, installmentAmount, installment1Date]
+        );
+        await conn.execute(
+            'INSERT INTO booking_payments (booking_id, installment_number, amount, due_date, status) VALUES (?, 3, ?, ?, "pending")',
+            [bookingId, installmentAmount, installment2Date]
+        );
+        
+        // Update calendar
+        const morningStatus = session_type === 'morning' || session_type === 'full_day' ? 'booked' : 'available';
+        const eveningStatus = session_type === 'evening' || session_type === 'full_day' ? 'booked' : 'available';
+        
+        await conn.execute(
+            `INSERT INTO hall_calendar (hall_id, date, booking_id, morning_status, evening_status) 
+             VALUES (?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE booking_id = ?, morning_status = ?, evening_status = ?`,
+            [hall_id, event_date, bookingId, morningStatus, eveningStatus, bookingId, morningStatus, eveningStatus]
+        );
+        
+        await conn.commit();
+        res.status(201).json({ 
+            id: bookingId, 
+            total_amount: totalAmount, 
+            deposit_amount: depositAmount,
+            message: 'Booking created successfully' 
+        });
+    } catch (error) {
+        await conn.rollback();
+        res.status(500).json({ error: error.message });
+    } finally {
+        conn.release();
+    }
+});
+
+app.post('/api/halls/bookings/:id/payment', authenticate, authorize(['process_payments']), async (req, res) => {
+    try {
+        const { installment_number, amount, payment_method } = req.body;
+        const bookingId = req.params.id;
+        
+        // Update payment
+        await pool.execute(
+            `UPDATE booking_payments 
+             SET paid_date = CURDATE(), status = 'paid', payment_method = ? 
+             WHERE booking_id = ? AND installment_number = ?`,
+            [payment_method, bookingId, installment_number]
+        );
+        
+        // Update booking paid amount
+        await pool.execute(
+            'UPDATE hall_bookings SET paid_amount = paid_amount + ? WHERE id = ?',
+            [amount, bookingId]
+        );
+        
+        // Check if all paid
+        const [booking] = await pool.execute('SELECT * FROM hall_bookings WHERE id = ?', [bookingId]);
+        if (booking[0].paid_amount >= booking[0].total_amount) {
+            await pool.execute("UPDATE hall_bookings SET status = 'confirmed' WHERE id = ?", [bookingId]);
+        }
+        
+        res.json({ message: 'Payment recorded successfully' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// =====================================================
+// Routes: Daily Transactions
+// =====================================================
+
+app.get('/api/daily', authenticate, authorize(['view_daily', 'manage_daily']), async (req, res) => {
+    try {
+        const { date } = req.query;
+        const targetDate = date || new Date().toISOString().split('T')[0];
+        
+        const [daily] = await pool.execute('SELECT * FROM daily_transactions WHERE date = ?', [targetDate]);
+        
+        if (!daily.length) {
+            // Create new daily if not exists
+            const [result] = await pool.execute(
+                'INSERT INTO daily_transactions (date, created_by) VALUES (?, ?)',
+                [targetDate, req.user.id]
+            );
+            const [newDaily] = await pool.execute('SELECT * FROM daily_transactions WHERE id = ?', [result.insertId]);
+            return res.json(newDaily[0]);
+        }
+        
+        // Get details
+        const [revenue] = await pool.execute(
+            'SELECT * FROM daily_revenue_details WHERE daily_id = ?', [daily[0].id]
+        );
+        const [expenses] = await pool.execute(
+            'SELECT * FROM daily_expense_details WHERE daily_id = ?', [daily[0].id]
+        );
+        
+        res.json({ ...daily[0], revenue_details: revenue, expense_details: expenses });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/daily/revenue', authenticate, authorize(['process_daily_sales']), async (req, res) => {
+    try {
+        const { daily_id, source, amount, payment_method, description } = req.body;
+        
+        const [result] = await pool.execute(
+            'INSERT INTO daily_revenue_details (daily_id, source, amount, payment_method, time, description) VALUES (?, ?, ?, ?, CURTIME(), ?)',
+            [daily_id, source, amount, payment_method, description]
+        );
+        
+        // Update totals
+        await pool.execute(`
+            UPDATE daily_transactions SET
+            ${source}_revenue = ${source}_revenue + ?,
+            total_revenue = restaurant_revenue + cafe_revenue + hall_1_revenue + hall_2_revenue + hall_3_revenue + hall_4_revenue + other_revenue + ?,
+            net_amount = total_revenue - total_expenses
+            WHERE id = ?
+        `, [amount, amount, daily_id]);
+        
+        res.status(201).json({ id: result.insertId });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/daily/expense', authenticate, authorize(['add_expenses']), upload.single('receipt'), async (req, res) => {
+    try {
+        const { daily_id, category, amount, description } = req.body;
+        const receiptImage = req.file ? req.file.path : null;
+        
+        const [result] = await pool.execute(
+            'INSERT INTO daily_expense_details (daily_id, category, amount, description, receipt_image, approved_by) VALUES (?, ?, ?, ?, ?, ?)',
+            [daily_id, category, amount, description, receiptImage, req.user.id]
+        );
+        
+        // Update totals
+        await pool.execute(`
+            UPDATE daily_transactions SET
+            ${category}_expense = ${category}_expense + ?,
+            total_expenses = purchases_expense + salaries_expense + utilities_expense + maintenance_expense + rent_expense + marketing_expense + other_expenses + ?,
+            net_amount = total_revenue - total_expenses
+            WHERE id = ?
+        `, [amount, amount, daily_id]);
+        
+        res.status(201).json({ id: result.insertId });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/daily/close', authenticate, authorize(['manage_daily']), async (req, res) => {
+    try {
+        const { date, closing_cash, notes } = req.body;
+        
+        await pool.execute('UPDATE daily_transactions SET closing_cash = ?, notes = ? WHERE date = ?', 
+            [closing_cash, notes, date]);
+        
+        const [result] = await pool.execute('CALL CloseDailyTransaction(?, ?)', [date, req.user.id]);
+        res.json(result[0][0]);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// =====================================================
+// Routes: Reports & Dashboard
+// =====================================================
+
+app.get('/api/dashboard', authenticate, async (req, res) => {
+    try {
+        const today = new Date().toISOString().split('T')[0];
+        
+        // Today's summary
+        const [todayStats] = await pool.execute(`
+            SELECT total_revenue, total_expenses, net_amount 
+            FROM daily_transactions WHERE date = ?
+        `, [today]);
+        
+        // Low stock alerts
+        const [lowStock] = await pool.execute(
+            'SELECT COUNT(*) as count FROM products WHERE current_stock <= min_stock'
+        );
+        
+        // Pending bookings
+        const [pendingBookings] = await pool.execute(
+            "SELECT COUNT(*) as count FROM hall_bookings WHERE status = 'pending'"
+        );
+        
+        // Upcoming payments (next 7 days)
+        const [upcomingPayments] = await pool.execute(`
+            SELECT COUNT(*) as count FROM booking_payments 
+            WHERE due_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)
+            AND status = 'pending'
+        `);
+        
+        // Today's attendance
+        const [attendance] = await pool.execute(`
+            SELECT 
+                COUNT(*) as total_employees,
+                SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present,
+                SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent,
+                SUM(CASE WHEN status = 'late' THEN 1 ELSE 0 END) as late
+            FROM attendance WHERE date = ?
+        `, [today]);
+        
+        res.json({
+            today: todayStats[0] || { total_revenue: 0, total_expenses: 0, net_amount: 0 },
+            alerts: {
+                low_stock: lowStock[0].count,
+                pending_bookings: pendingBookings[0].count,
+                upcoming_payments: upcomingPayments[0].count
+            },
+            attendance: attendance[0]
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/reports/monthly', authenticate, authorize(['view_reports']), async (req, res) => {
+    try {
+        const { month, year } = req.query;
+        
+        const [summary] = await pool.execute(`
+            SELECT 
+                SUM(total_revenue) as total_revenue,
+                SUM(total_expenses) as total_expenses,
+                SUM(net_amount) as net_profit,
+                SUM(restaurant_revenue) as restaurant_revenue,
+                SUM(cafe_revenue) as cafe_revenue,
+                SUM(hall_1_revenue + hall_2_revenue + hall_3_revenue + hall_4_revenue) as halls_revenue
+            FROM daily_transactions 
+            WHERE MONTH(date) = ? AND YEAR(date) = ?
+        `, [month, year]);
+        
+        const [dailyBreakdown] = await pool.execute(`
+            SELECT date, total_revenue, total_expenses, net_amount
+            FROM daily_transactions 
+            WHERE MONTH(date) = ? AND YEAR(date) = ?
+            ORDER BY date
+        `, [month, year]);
+        
+        res.json({
+            summary: summary[0],
+            daily_breakdown: dailyBreakdown
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// =====================================================
+// Error Handling & Server Start
+// =====================================================
+
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).json({ error: 'Something went wrong!' });
+});
+
+app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`📱 API ready for mobile app`);
+});
+// =====================================================
+// Flutter App - Restaurant Management System
+// نظام إدارة المطاعم والكافيهات
+// =====================================================
+
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/services.dart';
+
+void main() {
+  runApp(const RestaurantApp());
+}
+
+// =====================================================
+// Configuration & Models
+// =====================================================
+
+class ApiConfig {
+  static const String baseUrl = 'http://your-server-ip:3000/api';
+  static String? token;
+  
+  static Map<String, String> get headers => {
+    'Content-Type': 'application/json',
+    if (token != null) 'Authorization': 'Bearer $token',
+  };
+}
+
+// Models
+class User {
+  final int id;
+  final String name;
+  final String username;
+  final String role;
+  final List<String> permissions;
+
+  User({required this.id, required this.name, required this.username, required this.role, required this.permissions});
+
+  factory User.fromJson(Map<String, dynamic> json) {
+    return User(
+      id: json['id'],
+      name: json['name'],
+      username: json['username'],
+      role: json['role'],
+      permissions: List<String>.from(json['permissions']),
+    );
+  }
+}
+
+class Product {
+  final int id;
+  final String nameAr;
+  final double currentStock;
+  final double minStock;
+  final double costPrice;
+
+  Product({required this.id, required this.nameAr, required this.currentStock, required this.minStock, required this.costPrice});
+
+  factory Product.fromJson(Map<String, dynamic> json) {
+    return Product(
+      id: json['id'],
+      nameAr: json['name_ar'],
+      currentStock: double.parse(json['current_stock'].toString()),
+      minStock: double.parse(json['min_stock'].toString()),
+      costPrice: double.parse(json['cost_price'].toString()),
+    );
+  }
+  
+  bool get isLowStock => currentStock <= minStock;
+}
+
+class Employee {
+  final int id;
+  final String fullName;
+  final String jobTitle;
+  final String department;
+  final double basicSalary;
+
+  Employee({required this.id, required this.fullName, required this.jobTitle, required this.department, required this.basicSalary});
+
+  factory Employee.fromJson(Map<String, dynamic> json) {
+    return Employee(
+      id: json['id'],
+      fullName: json['full_name'],
+      jobTitle: json['job_title'],
+      department: json['department'],
+      basicSalary: double.parse(json['basic_salary'].toString()),
+    );
+  }
+}
+
+class Hall {
+  final int id;
+  final String nameAr;
+  final int capacity;
+  final double basePrice;
+
+  Hall({required this.id, required this.nameAr, required this.capacity, required this.basePrice});
+
+  factory Hall.fromJson(Map<String, dynamic> json) {
+    return Hall(
+      id: json['id'],
+      nameAr: json['name_ar'],
+      capacity: json['capacity'],
+      basePrice: double.parse(json['base_price'].toString()),
+    );
+  }
+}
+
+class HallBooking {
+  final int id;
+  final String customerName;
+  final String eventDate;
+  final double totalAmount;
+  final double paidAmount;
+  final String status;
+
+  HallBooking({
+    required this.id, 
+    required this.customerName, 
+    required this.eventDate, 
+    required this.totalAmount, 
+    required this.paidAmount, 
+    required this.status
+  });
+
+  factory HallBooking.fromJson(Map<String, dynamic> json) {
+    return HallBooking(
+      id: json['id'],
+      customerName: json['customer_name'],
+      eventDate: json['event_date'],
+      totalAmount: double.parse(json['total_amount'].toString()),
+      paidAmount: double.parse(json['paid_amount'].toString()),
+      status: json['status'],
+    );
+  }
+  
+  double get remaining => totalAmount - paidAmount;
+}
+
+class DailyTransaction {
+  final int id;
+  final String date;
+  final double totalRevenue;
+  final double totalExpenses;
+  final double netAmount;
+  final String status;
+
+  DailyTransaction({
+    required this.id,
+    required this.date,
+    required this.totalRevenue,
+    required this.totalExpenses,
+    required this.netAmount,
+    required this.status,
+  });
+
+  factory DailyTransaction.fromJson(Map<String, dynamic> json) {
+    return DailyTransaction(
+      id: json['id'],
+      date: json['date'],
+      totalRevenue: double.parse(json['total_revenue'].toString()),
+      totalExpenses: double.parse(json['total_expenses'].toString()),
+      netAmount: double.parse(json['net_amount'].toString()),
+      status: json['status'],
+    );
+  }
+}
+
+// =====================================================
+// Auth Service
+// =====================================================
+
+class AuthService {
+  static Future<bool> login(String username, String password) async {
+    try {
+      final response = await http.post(
+        Uri.parse('${ApiConfig.baseUrl}/auth/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'username': username, 'password': password}),
+      );
+      
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        ApiConfig.token = data['token'];
+        
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('token', data['token']);
+        await prefs.setString('user', json.encode(data['user']));
+        
+        return true;
+      }
+      return false;
+    } catch (e) {
+      print('Login error: $e');
+      return false;
+    }
+  }
+  
+  static Future<void> logout() async {
+    ApiConfig.token = null;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+  }
+  
+  static Future<User?> getStoredUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userStr = prefs.getString('user');
+    if (userStr != null) {
+      return User.fromJson(json.decode(userStr));
+    }
+    return null;
+  }
+}
+
+// =====================================================
+// API Services
+// =====================================================
+
+class InventoryService {
+  static Future<List<Product>> getProducts() async {
+    final response = await http.get(
+      Uri.parse('${ApiConfig.baseUrl}/products'),
+      headers: ApiConfig.headers,
+    );
+    if (response.statusCode == 200) {
+      final List<dynamic> data = json.decode(response.body);
+      return data.map((e) => Product.fromJson(e)).toList();
+    }
+    throw Exception('Failed to load products');
+  }
+  
+  static Future<List<Product>> getLowStock() async {
+    final response = await http.get(
+      Uri.parse('${ApiConfig.baseUrl}/inventory/low-stock'),
+      headers: ApiConfig.headers,
+    );
+    if (response.statusCode == 200) {
+      final List<dynamic> data = json.decode(response.body);
+      return data.map((e) => Product.fromJson(e)).toList();
+    }
+    throw Exception('Failed to load low stock');
+  }
+}
+
+class HRService {
+  static Future<List<Employee>> getEmployees() async {
+    final response = await http.get(
+      Uri.parse('${ApiConfig.baseUrl}/employees'),
+      headers: ApiConfig.headers,
+    );
+    if (response.statusCode == 200) {
+      final List<dynamic> data = json.decode(response.body);
+      return data.map((e) => Employee.fromJson(e)).toList();
+    }
+    throw Exception('Failed to load employees');
+  }
+  
+  static Future<void> checkIn(int employeeId) async {
+    final response = await http.post(
+      Uri.parse('${ApiConfig.baseUrl}/attendance/check-in'),
+      headers: ApiConfig.headers,
+      body: json.encode({
+        'employee_id': employeeId,
+        'location_lat': 24.7136,
+        'location_lng': 46.6753,
+      }),
+    );
+    if (response.statusCode != 201) throw Exception('Check-in failed');
+  }
+  
+  static Future<void> checkOut(int employeeId) async {
+    final response = await http.post(
+      Uri.parse('${ApiConfig.baseUrl}/attendance/check-out'),
+      headers: ApiConfig.headers,
+      body: json.encode({
+        'employee_id': employeeId,
+        'location_lat': 24.7136,
+        'location_lng': 46.6753,
+      }),
+    );
+    if (response.statusCode != 200) throw Exception('Check-out failed');
+  }
+}
+
+class HallService {
+  static Future<List<Hall>> getHalls() async {
+    final response = await http.get(
+      Uri.parse('${ApiConfig.baseUrl}/halls'),
+      headers: ApiConfig.headers,
+    );
+    if (response.statusCode == 200) {
+      final List<dynamic> data = json.decode(response.body);
+      return data.map((e) => Hall.fromJson(e)).toList();
+    }
+    throw Exception('Failed to load halls');
+  }
+  
+  static Future<void> createBooking(Map<String, dynamic> data) async {
+    final response = await http.post(
+      Uri.parse('${ApiConfig.baseUrl}/halls/bookings'),
+      headers: ApiConfig.headers,
+      body: json.encode(data),
+    );
+    if (response.statusCode != 201) throw Exception('Booking failed');
+  }
+}
+
+class DailyService {
+  static Future<DailyTransaction> getDaily(String date) async {
+    final response = await http.get(
+      Uri.parse('${ApiConfig.baseUrl}/daily?date=$date'),
+      headers: ApiConfig.headers,
+    );
+    if (response.statusCode == 200) {
+      return DailyTransaction.fromJson(json.decode(response.body));
+    }
+    throw Exception('Failed to load daily');
+  }
+  
+  static Future<void> addRevenue(Map<String, dynamic> data) async {
+    final response = await http.post(
+      Uri.parse('${ApiConfig.baseUrl}/daily/revenue'),
+      headers: ApiConfig.headers,
+      body: json.encode(data),
+    );
+    if (response.statusCode != 201) throw Exception('Failed to add revenue');
+  }
+  
+  static Future<void> addExpense(Map<String, dynamic> data) async {
+    final response = await http.post(
+      Uri.parse('${ApiConfig.baseUrl}/daily/expense'),
+      headers: ApiConfig.headers,
+      body: json.encode(data),
+    );
+    if (response.statusCode != 201) throw Exception('Failed to add expense');
+  }
+}
+
+// =====================================================
+// Main App
+// =====================================================
+
+class RestaurantApp extends StatelessWidget {
+  const RestaurantApp({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'نظام إدارة المطاعم',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        primarySwatch: Colors.indigo,
+        fontFamily: 'Cairo',
+        useMaterial3: true,
+      ),
+      home: const SplashScreen(),
+    );
+  }
+}
+
+// =====================================================
+// Screens
+// =====================================================
+
+class SplashScreen extends StatefulWidget {
+  const SplashScreen({Key? key}) : super(key: key);
+
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _checkAuth();
+  }
+  
+  void _checkAuth() async {
+    await Future.delayed(const Duration(seconds: 2));
+    final user = await AuthService.getStoredUser();
+    if (user != null) {
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => DashboardScreen(user: user)));
+    } else {
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.restaurant_menu, size: 100, color: Colors.indigo),
+            const SizedBox(height: 20),
+            const Text('نظام إدارة المطاعم والكافيهات', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({Key? key}) : super(key: key);
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final _usernameCtrl = TextEditingController();
+  final _passwordCtrl = TextEditingController();
+  bool _loading = false;
+
+  void _login() async {
+    setState(() => _loading = true);
+    final success = await AuthService.login(_usernameCtrl.text, _passwordCtrl.text);
+    setState(() => _loading = false);
+    
+    if (success) {
+      final user = await AuthService.getStoredUser();
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => DashboardScreen(user: user!)));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('بيانات الدخول غير صحيحة')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.restaurant, size: 80, color: Colors.indigo),
+            const SizedBox(height: 30),
+            TextField(
+              controller: _usernameCtrl,
+              decoration: const InputDecoration(labelText: 'اسم المستخدم', prefixIcon: Icon(Icons.person)),
+            ),
+            const SizedBox(height: 15),
+            TextField(
+              controller: _passwordCtrl,
+              obscureText: true,
+              decoration: const InputDecoration(labelText: 'كلمة المرور', prefixIcon: Icon(Icons.lock)),
+            ),
+            const SizedBox(height: 30),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                onPressed: _loading ? null : _login,
+                child: _loading ? const CircularProgressIndicator() : const Text('تسجيل الدخول', style: TextStyle(fontSize: 18)),
+              ),
+            ),
+          ],
+        ),
+     
